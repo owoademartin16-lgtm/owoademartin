@@ -102,9 +102,10 @@
   .nav-gh svg{ width: 15px; height: 15px; }
   .menu-btn{
     display: none; background: none; border: 1px solid var(--line-strong);
-    border-radius: 10px; color: var(--paper); padding: 8px 11px; cursor: pointer;
-    font-family: var(--font-mono); font-size: 13px;
+    border-radius: 10px; color: var(--paper); padding: 8px 10px; cursor: pointer;
+    line-height: 0;
   }
+  .menu-btn svg{ width: 20px; height: 20px; }
   @media (max-width: 860px){
     .nav-links, .nav-right .nav-gh{ display: none; }
     .menu-btn{ display: block; }
@@ -265,7 +266,16 @@
   .app-card p{ font-size: 13.5px; color: var(--paper-dim); margin-bottom: 18px; flex-grow: 1; }
 
   /* ---------- skills ---------- */
-  .skills-grid{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .skills-marquee{ overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--ink); padding: 20px 0; }
+  .skills-track{ display: flex; gap: 12px; width: max-content; padding: 0 6px; animation: scroll-x 30s linear infinite; }
+  .skills-marquee:hover .skills-track{ animation-play-state: paused; }
+  @keyframes scroll-x{ from{ transform: translateX(0); } to{ transform: translateX(-50%); } }
+  .skill-chip{
+    font-family: var(--font-mono); font-size: 14px; color: var(--paper);
+    border: 1px solid var(--line-strong); padding: 10px 22px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .skill-chip.hot{ border-color: var(--signal); color: var(--signal); }
   .skill-group{ background: var(--ink); padding: 26px 24px; }
   .skill-group h4{ font-family: var(--font-mono); font-size: 12px; color: var(--signal); margin-bottom: 14px; text-transform: lowercase; }
   .skill-group ul{ list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; color: var(--paper-dim); }
@@ -328,7 +338,7 @@
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
         GitHub
       </a>
-      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks">Menu</button>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Open navigation menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
     </div>
   </nav>
 </header>
@@ -716,22 +726,10 @@
         <div class="num">05 · skills</div>
         <h2>The working stack.</h2>
       </div>
-      <div class="skills-grid reveal">
-        <div class="skill-group">
-          <h4>languages</h4>
-          <ul><li>Python</li><li>SQL</li></ul>
-        </div>
-        <div class="skill-group">
-          <h4>libraries</h4>
-          <ul><li>Pandas</li><li>NumPy</li><li>Scikit-learn</li></ul>
-        </div>
-        <div class="skill-group">
-          <h4>bi &amp; tools</h4>
-          <ul><li>Power BI</li><li>Excel</li><li>Streamlit</li><li>Git &amp; GitHub</li></ul>
-        </div>
-        <div class="skill-group">
-          <h4>methods</h4>
-          <ul><li>Machine Learning</li><li>Time Series</li><li>Data Visualization</li></ul>
+      <div class="skills-marquee reveal" aria-label="Skills scrolling list">
+        <div class="skills-track">
+          <span class="skill-chip hot">Python</span><span class="skill-chip hot">SQL</span><span class="skill-chip hot">Pandas</span><span class="skill-chip">NumPy</span><span class="skill-chip hot">Scikit-learn</span><span class="skill-chip">Power BI</span><span class="skill-chip">Excel</span><span class="skill-chip">Streamlit</span><span class="skill-chip">Git &amp; GitHub</span><span class="skill-chip">Machine Learning</span><span class="skill-chip">Time Series</span><span class="skill-chip">Data Visualization</span>
+          <span class="skill-chip hot" aria-hidden="true">Python</span><span class="skill-chip hot" aria-hidden="true">SQL</span><span class="skill-chip hot" aria-hidden="true">Pandas</span><span class="skill-chip" aria-hidden="true">NumPy</span><span class="skill-chip hot" aria-hidden="true">Scikit-learn</span><span class="skill-chip" aria-hidden="true">Power BI</span><span class="skill-chip" aria-hidden="true">Excel</span><span class="skill-chip" aria-hidden="true">Streamlit</span><span class="skill-chip" aria-hidden="true">Git &amp; GitHub</span><span class="skill-chip" aria-hidden="true">Machine Learning</span><span class="skill-chip" aria-hidden="true">Time Series</span><span class="skill-chip" aria-hidden="true">Data Visualization</span>
         </div>
       </div>
     </div>
