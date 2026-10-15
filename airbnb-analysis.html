@@ -224,7 +224,7 @@
       <section class="chapter" id="data">
         <div class="chnum">01 · the data</div>
         <h2>10,369 Amsterdam listings in one June 2026 snapshot.</h2>
-        <p>Inside Airbnb publishes full listing scrapes for Amsterdam. The June 15, 2026 file holds <strong>10,369 listings across 90 columns</strong>: host details, location, room and bed counts, availability calendars, review scores, amenities, and nightly prices. Each row is one specific place a guest could book, from a €52 shared room to an €11,412 canal mansion.</p>
+        <p>Inside Airbnb publishes full listing scrapes for Amsterdam. The June 15, 2026 file holds <strong>10,369 listings across 90 columns</strong>: host details, location, room and bed counts, availability calendars, review scores, amenities, and nightly prices. Each row is one specific place a guest could book, from listings under €15 to an €11,412 canal mansion, with shared rooms at a €52 median.</p>
         <p>Not every listing carries a price. Only <strong>6,377 listings had a usable nightly rate</strong>, and those became the working data set. After final outlier filtering, <strong>about 6,370 listings</strong> went into modeling. That filtering is not a weakness in the work. A listing without a price cannot teach pricing. A duplicate check found <strong>zero duplicate rows</strong>.</p>
         <div class="stat-strip">
           <div class="stat"><div class="n">10,369</div><div class="t">raw listings</div></div>
@@ -287,7 +287,7 @@
           </tbody>
         </table>
         <h3>Room type is not property type</h3>
-        <p>Two columns sound alike but measure different things. <strong>Room type</strong> is the booking category with 4 values: an entire place, a private room, a hotel room, or a shared room. <strong>Property type</strong> describes the building itself across 59 values, such as rental unit, condo, townhouse, or houseboat. Your GitHub chart shows property types, while the chart above shows room types. Both views matter, so here is the property side: entire rental units lead by far at 4,451 listings.</p>
+        <p>Two columns sound alike but measure different things. <strong>Room type</strong> is the booking category with 4 values: an entire place, a private room, a hotel room, or a shared room. <strong>Property type</strong> describes the building itself across 59 values, such as rental unit, condo, townhouse, or houseboat. The GitHub chart shows property types, while the chart above shows room types. Both views matter, so here is the property side: entire rental units lead by far at 4,451 listings.</p>
         <figure class="fig-h">
           <svg viewBox="0 0 560 370" role="img" aria-label="Horizontal bar chart of top ten property types, entire rental unit highest at 4451 listings">
             <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">top 10 property types (count)</text>
@@ -423,11 +423,11 @@
         <div class="chnum">06 · the models</div>
         <h2>CatBoost 0.7037, LightGBM 0.7034, Gradient Boosting 0.7023.</h2>
         <p>Four approaches trained on 80% of listings and faced the unseen 20%. Linear Regression managed R² 0.5813, respectable for a straight line through 24 columns, but far behind the trees. The three tree boosters landed within two thousandths of each other, and <strong>CatBoost finished first at R² 0.7037 with an average miss of €83.32 per night</strong>. That model was saved for the app, with its feature order stored alongside it.</p>
-        <p>Look at training scores next to test scores and a second story appears. LightGBM memorized the training data best at 0.8545 but kept only 0.7034 on new listings. CatBoost memorized less (0.7727) and kept the most (0.7038). The model that learned the least by heart generalized the best, which is exactly the trade-off to watch.</p>
+        <p>Look at training scores next to test scores and a second story appears. LightGBM memorized the training data best at 0.8545 but kept only 0.7034 on new listings. CatBoost memorized less (0.7727) and kept the most (0.7037). The model that learned the least by heart generalized the best, which is exactly the trade-off to watch.</p>
         <table>
           <thead><tr><th>Model</th><th class="num">R² · train</th><th class="num">R² · test</th><th class="num">MAE</th></tr></thead>
           <tbody>
-            <tr class="best"><td>CatBoost</td><td class="num">0.7727</td><td class="num">0.7038</td><td class="num">€83.32</td></tr>
+            <tr class="best"><td>CatBoost</td><td class="num">0.7727</td><td class="num">0.7037</td><td class="num">€83.32</td></tr>
             <tr><td>LightGBM</td><td class="num">0.8545</td><td class="num">0.7034</td><td class="num">n/a</td></tr>
             <tr><td>GradientBoosting</td><td class="num">0.8098</td><td class="num">0.7023</td><td class="num">n/a</td></tr>
             <tr><td>Linear Regression</td><td class="num">0.5698</td><td class="num">0.5813</td><td class="num">n/a</td></tr>
@@ -473,7 +473,7 @@
       <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">the bottom line</div>
       <h2>The price of a night, explained by the data.</h2>
       <p>Amsterdam nightly prices center near €291 with a long luxury tail past €11,000. Entire homes dominate the market at nearly double the private room rate. Location moves the median from €120 in Bijlmer-Oost to €336 in De Pijp. A CatBoost model using 24 listing facts predicts new nightly rates at <strong>R² 0.7037 with an €83.32 average miss</strong>, and it generalizes better than rivals that memorized more.</p>
-      <blockquote>Know what each listing offers, know where it sits, and price it against the neighborhood.</blockquote>
+      <blockquote>Know what each listing offers, know where it sits, and price it against the neighbourhood.</blockquote>
     </section>
 
     <div class="back-row">

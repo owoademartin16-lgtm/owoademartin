@@ -264,7 +264,7 @@
         <div class="chnum">chapter 03</div>
         <h2>When Was Taxi Demand Highest?</h2>
         <p>The clearest pattern appeared when trips were grouped by hour. The highest trip volume occurred around <strong>6 PM with more than 253,000 trips</strong>, which fits the evening commute as the working day ends and evening activity begins.</p>
-        <p>Interestingly, the hour with the highest average fare was different: <strong>5 AM at $25.67 average fare</strong>. This demonstrates an important distinction between <strong>demand volume</strong> and <strong>trip value</strong>. An hour can generate many trips without producing the highest average fare. For a transportation company, these are two different business questions:</p>
+        <p>Interestingly, the hour with the highest average base fare was different: <strong>5 AM at $25.67 average fare_amount</strong>. Base fare here means the metered fare before extras, tips, tolls, and taxes, which is why these hourly figures sit below the $25.99 all-in trip average above. This demonstrates an important distinction between <strong>demand volume</strong> and <strong>trip value</strong>. An hour can generate many trips without producing the highest average fare. For a transportation company, these are two different business questions:</p>
         <blockquote>When do we need the most vehicles? And when are individual trips most valuable?</blockquote>
       </section>
 
@@ -290,7 +290,7 @@
             <rect x="120" y="150" width="135" height="26" rx="6" fill="#FF9F1C"/>
             <text x="259" y="169" font-family="Space Mono, monospace" font-size="12" fill="#EDEAD9" text-anchor="start">840K</text>
           </svg>
-          <figcaption>Weekday trips outnumber weekend trips roughly 3 to 1.</figcaption>
+          <figcaption>Weekday trips outnumber weekend trips roughly 3 to 1 (rounded summaries of the cleaned modeling subset).</figcaption>
         </figure>
       </section>
 
@@ -298,7 +298,7 @@
       <section class="chapter" id="ch6">
         <div class="chnum">chapter 06</div>
         <h2>Does the Day of the Week Affect Fare Value?</h2>
-        <p>The highest average fare occurred on <strong>Monday at $21.39</strong>. Trip frequency and trip value do not necessarily move together, and understanding that distinction helps transportation companies make better operational decisions.</p>
+        <p>The highest average base fare by weekday occurred on <strong>Monday at $21.39</strong>. Trip frequency and trip value do not necessarily move together, and understanding that distinction helps transportation companies make better operational decisions.</p>
       </section>
 
       <!-- Ch 7 -->
@@ -411,7 +411,7 @@ Fare Estimate</pre>
     <section class="conclusion">
       <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">final findings</div>
       <h2>Volume and value peak at different times.</h2>
-      <p>The network generated approximately <strong>$90.34 million</strong> across more than <strong>3.47 million trips</strong>. Demand concentrated during the day, with <strong>6 PM</strong> recording the highest trip volume, yet the highest average fare occurred around <strong>5 AM</strong>. Weekdays dominated volume, while single days such as January 16 generated exceptional revenue.</p>
+      <p>The network generated approximately <strong>$90.34 million</strong> across more than <strong>3.47 million trips</strong>. Demand built through the day and peaked at <strong>6 PM</strong> for trip volume, yet the highest average base fare occurred around <strong>5 AM</strong>. Weekdays dominated volume, while single days such as January 16 generated exceptional revenue.</p>
       <p>On modeling, nonlinear tree-based models beat the linear approach clearly, with LightGBM at <strong>MAE $2.61, RMSE $4.57, and R² 0.948</strong>. The project combined descriptive analytics, predictive analytics, and business intelligence in one pipeline.</p>
       <blockquote>A large dataset is not valuable simply because it contains millions of rows. The real value comes from turning those records into information that supports better decisions.</blockquote>
     </section>
