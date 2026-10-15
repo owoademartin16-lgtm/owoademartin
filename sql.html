@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Case Studies · Martin Owoade</title>
+<meta name="description" content="SQL case studies by Martin Owoade: Iowa liquor sales analysis and London Fire Brigade incident analysis, both written entirely in PostgreSQL.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --sqlblue: #4E8DC5;
+    --fire: #E5484D;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .proj-list{ padding: 24px 0 40px; display: flex; flex-direction: column; gap: 22px; }
+  .proj-card{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 20px; padding: 32px;
+    border-left: 5px solid var(--accent, var(--signal));
+    transition: border-color .25s, transform .25s;
+  }
+  .proj-card:hover{ border-color: var(--line-strong); transform: translateY(-3px); }
+  .proj-meta{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-bottom: 12px; }
+  .proj-card h2{ font-family: var(--font-display); font-size: 22px; font-weight: 600; margin-bottom: 10px; }
+  .proj-card p{ color: var(--paper-dim); font-size: 14.5px; margin-bottom: 16px; max-width: 62ch; }
+  .proj-card p strong{ color: var(--paper); font-weight: 500; }
+  .stat-row{ display: flex; gap: 26px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-row .stat .n{ font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--accent, var(--signal)); }
+  .stat-row .stat .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .back-row{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 80px; }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to portfolio
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      View on GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">postgresql · two case studies</div>
+      <h1>SQL Analysis Projects</h1>
+      <p class="lede">Two end-to-end analyses written almost entirely in PostgreSQL: millions of rows questioned with <strong style="color:var(--paper)">GROUP BY</strong>, window functions, and date logic, then checked for the data-quality problems that decide whether any answer can be trusted.</p>
+    </div>
+
+    <div class="proj-list">
+      <article class="proj-card" style="--accent:#4E8DC5">
+        <div class="proj-meta">postgresql · retail · data validation</div>
+        <h2>Iowa Liquor Sales Analysis</h2>
+        <p>Monthly trends, category leaders, and store rankings across <strong>2.92 million Iowa liquor sales records</strong>, plus a duplicate-record investigation that moved the revenue total by <strong>$76.75M</strong>.</p>
+        <div class="stat-row">
+          <div class="stat"><div class="n">2,920,615</div><div class="t">records queried</div></div>
+          <div class="stat"><div class="n">$501.56M</div><div class="t">recorded revenue</div></div>
+          <div class="stat"><div class="n">429,996</div><div class="t">repeated rows found</div></div>
+        </div>
+        <a class="btn btn-primary" href="iowa-analysis.html">Read the Case Study</a>&nbsp;&nbsp;<a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/iowa_food_establishments" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>GitHub</a>
+      </article>
+
+      <article class="proj-card" style="--accent:#E5484D">
+        <div class="proj-meta">postgresql · public safety · trends</div>
+        <h2>London Fire Brigade Incident Analysis</h2>
+        <p>Demand patterns across <strong>358,338 emergency incidents</strong>: false alarms and special services make up 86.45% of calls, demand peaks at 18:00, and every month of 2026 so far beats 2025.</p>
+        <div class="stat-row">
+          <div class="stat"><div class="n">358,338</div><div class="t">incidents analyzed</div></div>
+          <div class="stat"><div class="n">21,341</div><div class="t">calls at 18:00 peak</div></div>
+          <div class="stat"><div class="n">+14.38%</div><div class="t">steepest 2026 monthly rise</div></div>
+        </div>
+        <a class="btn btn-primary" href="fire-analysis.html">Read the Case Study</a>&nbsp;&nbsp;<a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/london-fire-incidents-analysis" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>GitHub</a>
+      </article>
+
+      <article class="proj-card" style="--accent:#84CC16">
+        <div class="proj-meta">postgresql · logistics · synthetic data</div>
+        <h2>Nigerian Delivery Operations Analysis</h2>
+        <p>Success rates, failure hotspots, and duration patterns across <strong>150,000 delivery records</strong>, with the honest warning that company gaps under one point deserve small claims.</p>
+        <div class="stat-row">
+          <div class="stat"><div class="n">89.96%</div><div class="t">delivered on record</div></div>
+          <div class="stat"><div class="n">0.65pp</div><div class="t">courier success gap</div></div>
+          <div class="stat"><div class="n">9.60%</div><div class="t">worst city-company cell</div></div>
+        </div>
+        <a class="btn btn-primary" href="delivery-analysis.html">Read the Case Study</a>&nbsp;&nbsp;<a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/Nigerian-delivery-operations-analysis" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>GitHub</a>
+      </article>
+    </div>
+
+    <div class="back-row">
+      <a class="btn btn-ghost" href="index.html#sql">Back to portfolio</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

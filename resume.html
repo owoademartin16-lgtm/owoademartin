@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Martin Owoade — Resume · Data Analyst | Data Scientist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.22);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 15px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; text-decoration: none; }
+  .resume-wrap{ max-width: 820px; margin: 0 auto; padding: 60px 40px 80px; }
+  .topbar{
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 0 40px; border-bottom: 1px solid var(--line); margin-bottom: 40px;
+  }
+  .topbar a{
+    font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim);
+    display: flex; align-items: center; gap: 6px; transition: color .25s;
+  }
+  .topbar a:hover{ color: var(--signal); }
+  .resume-header{
+    display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: start;
+    margin-bottom: 48px; padding-bottom: 40px; border-bottom: 1px solid var(--line);
+  }
+  .resume-header h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(1.8rem, 3vw, 2.4rem); letter-spacing: -0.01em;
+    line-height: 1.15; color: var(--paper);
+  }
+  .resume-header .subtitle{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-top: 8px; }
+  .resume-header .contact-col{ text-align: right; font-size: 13px; color: var(--paper-dim); line-height: 1.8; }
+  .resume-header .contact-col a{ color: var(--paper-dim); transition: color .25s; }
+  .resume-header .contact-col a:hover{ color: var(--signal); }
+  .section{ margin-bottom: 44px; }
+  .section-title{
+    font-family: var(--font-display); font-weight: 600; font-size: 16px;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--signal);
+    margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--line);
+  }
+  .summary{ color: var(--paper-dim); font-size: 14.5px; max-width: 68ch; }
+  .skills-grid{ display: grid; grid-template-columns: 160px 1fr; gap: 10px 20px; }
+  .skills-grid dt{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); padding-top: 3px; }
+  .skills-grid dd{ font-size: 14px; color: var(--paper); }
+  .proj-item{ padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .proj-item:last-child{ border-bottom: none; }
+  .proj-item h3{ font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--paper); }
+  .proj-item .stackline{ font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin: 4px 0 8px; }
+  .proj-item p{ font-size: 14px; color: var(--paper-dim); max-width: 66ch; }
+  .proj-item .score{ font-family: var(--font-mono); font-size: 12px; color: var(--signal); margin-top: 6px; }
+  .placeholder{
+    border: 1px dashed var(--line-strong); border-radius: 12px;
+    padding: 18px; color: var(--paper-dim); font-size: 14px; font-style: italic;
+  }
+  .exp-item{
+    display: grid; grid-template-columns: 1fr 140px; gap: 24px;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+  }
+  .exp-item:last-child{ border-bottom: none; }
+  .exp-when{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); padding-top: 2px; text-align: right; }
+  .exp-body h3{ font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--paper); margin-bottom: 2px; }
+  .exp-body .org{ font-size: 13.5px; color: var(--teal); margin-bottom: 10px; }
+  .exp-body ul{ padding-left: 18px; color: var(--paper-dim); font-size: 14px; }
+  .exp-body li{ margin-bottom: 5px; }
+  .edu-item{ padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .edu-item:last-child{ border-bottom: none; }
+  .edu-item h3{ font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--paper); }
+  .edu-item .school{ font-size: 14px; color: var(--teal); margin: 4px 0 6px; }
+  .edu-item .details{ font-size: 13.5px; color: var(--paper-dim); }
+  .back-btn{
+    position: fixed; bottom: 32px; right: 32px; width: 52px; height: 52px;
+    border-radius: 50%; background: var(--signal); color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 30px rgba(255,159,28,0.3);
+    transition: transform .3s, background .25s; z-index: 100;
+  }
+  .back-btn:hover{ transform: translateY(-2px); background: var(--paper); }
+  .back-btn svg{ width: 20px; height: 20px; }
+  @media print{
+    body{ background: #fff; color: #111; }
+    .topbar, .back-btn{ display: none; }
+    .resume-wrap{ padding: 20px; max-width: 100%; }
+    .resume-header .contact-col a{ color: #111; }
+    .section-title{ color: #c47600; border-bottom-color: #ddd; }
+    .proj-item{ border-color: #ddd; }
+    .skills-grid dt{ color: #555; }
+    :root{ --signal: #c47600; --teal: #1a8a5c; }
+  }
+  @media (max-width: 700px){
+    .resume-header{ grid-template-columns: 1fr; }
+    .resume-header .contact-col{ text-align: left; }
+    .exp-item{ grid-template-columns: 1fr; gap: 6px; }
+    .exp-when{ text-align: left; }
+    .skills-grid{ grid-template-columns: 1fr; }
+    .skills-grid dt{ padding-top: 8px; }
+    .resume-wrap{ padding: 32px 20px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="resume-wrap">
+
+  <div class="topbar">
+    <a href="index.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to portfolio
+    </a>
+    <a href="javascript:window.print()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Print / Save PDF
+    </a>
+  </div>
+
+  <!-- HEADER -->
+  <div class="resume-header">
+    <div>
+      <h1>Martin Owoade A.</h1>
+      <div class="subtitle">Data Analyst | Data Scientist | DeFi Research Analyst</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="section">
+    <div class="section-title">Professional Summary</div>
+    <p class="summary">Data Scientist and Computer Scientist with a BSc in Computer Science and practical experience in data analysis, exploratory data analysis, data visualization, and machine learning. Skilled in Python, SQL, Excel, and Power BI, with hands-on experience cleaning datasets, engineering features, developing predictive models, and communicating data-driven insights. Additional experience in Web3 technical writing, DeFi research, on-chain analytics, and community operations.</p>
+  </div>
+
+  <!-- SKILLS -->
+  <div class="section">
+    <div class="section-title">Core Skills</div>
+    <dl class="skills-grid">
+      <dt>Programming &amp; Analysis</dt>
+      <dd>Python, pandas, NumPy, SQL, MySQL, Data Cleaning, EDA, Statistics, Feature Engineering</dd>
+      <dt>Visualization &amp; BI</dt>
+      <dd>Power BI, Excel, Matplotlib, Seaborn, KPI Reporting, Dashboards, Data Storytelling</dd>
+      <dt>Machine Learning</dt>
+      <dd>Regression, Classification, Time-Series Forecasting, Random Forest, XGBoost, CatBoost, scikit-learn, MAE, RMSE, R²</dd>
+      <dt>Blockchain &amp; DeFi</dt>
+      <dd>Dune Analytics, DeFiLlama, On-Chain Research, TVL Analysis, Liquidity Metrics</dd>
+      <dt>Tools &amp; Platforms</dt>
+      <dd>Jupyter, Git, GitHub, Streamlit, Figma, Canva, GitBook, Notion</dd>
+    </dl>
+  </div>
+
+  <!-- PROJECTS -->
+  <div class="section">
+    <div class="section-title">Selected Projects</div>
+
+    <div class="proj-item">
+      <h3>NYC Taxi Fare Prediction</h3>
+      <div class="stackline">Python · Pandas · Scikit-learn · LightGBM · Streamlit</div>
+      <p>Regression project predicting NYC taxi trip fares from trip and time-related features. Best model LightGBM.</p>
+      <div class="score">Test R² 0.9484 · MAE $2.61 · RMSE $4.57</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>Cannabis Gross Sales Prediction</h3>
+      <div class="stackline">Python · Pandas · Scikit-learn · Time Series · Streamlit</div>
+      <p>Time-series project predicting daily gross sales from historical patterns, lag features, rolling averages and calendar features. Best model Ridge Regression, with Linear Regression virtually identical.</p>
+      <div class="score">Test R² 0.900 · MAE $4,444 · RMSE $5,615</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>Electricity Load Forecasting</h3>
+      <div class="stackline">Python · Pandas · Scikit-learn · Random Forest · Time Series · Streamlit</div>
+      <p>Forecasting project predicting electricity demand from historical load values, time features and lag features.</p>
+      <div class="score">Test R² 0.903 · MAE 1,774 MW</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>Amsterdam Airbnb Nightly Price Prediction</h3>
+      <div class="stackline">Python · Pandas · Scikit-learn · CatBoost</div>
+      <p>Machine learning project predicting Amsterdam Airbnb nightly prices from listing size, location, reviews, and host details.</p>
+      <div class="score">Test R² 0.704 · MAE €83.32</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>Hospital Patient Experience (HCAHPS) Analysis</h3>
+      <div class="stackline">Python · Pandas · Seaborn · Healthcare Analytics</div>
+      <p>Nine years of US hospital patient survey results across 10 care measures. Full write-up on the portfolio site.</p>
+      <div class="score">2019 peak 72.2% · 2021 avg 69.4% · Care Transition lowest at 51.0%</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>Bank Customer Churn Prediction</h3>
+      <div class="stackline">Python · Pandas · Scikit-learn · Random Forest · Streamlit</div>
+      <p>Classification project predicting churn for 10,000 bank customers, with segmentation and retention strategy. Full write-up on the portfolio site.</p>
+      <div class="score">Test accuracy 84% · Churn F1 0.63 · Churn recall 67%</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>Retail Performance Analysis &amp; Sales Strategy</h3>
+      <div class="stackline">Python · Pandas · CatBoost · Retail Analytics · Seasonality</div>
+      <p>Analysis of 125,751 transactions ($10.48M revenue) covering category mix, seasonal demand waves, and inventory strategy, plus a CatBoost sales forecast. Full write-up on the portfolio site.</p>
+      <div class="score">$10.48M net revenue · 73.8% Scholar line share · Forecast R² 0.865</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>Iowa Liquor Sales Analysis</h3>
+      <div class="stackline">PostgreSQL · SQL · Window Functions · Data Validation</div>
+      <p>SQL case study over 2.92M liquor sales records covering monthly trends, category and store rankings, and a duplicate-record investigation. Full write-up on the portfolio site.</p>
+      <div class="score">$501.56M recorded revenue · 429,996 repeated rows · $76.75M revenue gap</div>
+    </div>
+
+    <div class="proj-item">
+      <h3>London Fire Brigade Incident Analysis</h3>
+      <div class="stackline">PostgreSQL · SQL · Python · Data Validation</div>
+      <p>SQL case study over 358,338 emergency incidents covering category mix, borough rankings, hourly and weekday demand, and year-over-year trends. Full write-up on the portfolio site.</p>
+      <div class="score">86.45% false alarm + special · 18:00 peak · 2026 up year over year</div>
+    </div>
+  </div>
+
+  <!-- EXPERIENCE -->
+  <div class="section">
+    <div class="section-title">Professional Experience</div>
+
+    <div class="exp-item">
+      <div class="exp-body">
+        <h3>Technical Writer, DeFi Research Analyst &amp; Community Moderator</h3>
+        <div class="org">LTV Protocol · Remote, Ukraine - Portugal</div>
+        <ul>
+          <li>Researched DeFi protocols, lending markets, and liquidity mechanisms using Dune Analytics and DeFiLlama (TVL, liquidity, ecosystem activity).</li>
+          <li>Wrote technical articles, documentation, FAQs, and beginner guides, including coverage of leveraged vaults and the Aave V3 integration.</li>
+          <li>Created infographics and visual explainers to make complex DeFi concepts accessible to users.</li>
+          <li>Managed Discord community engagement and moderation, supporting user education and ecosystem outreach.</li>
+        </ul>
+      </div>
+      <div class="exp-when">Mar 2025 – Apr 2026</div>
+    </div>
+  </div>
+
+  <!-- EDUCATION -->
+  <div class="section">
+    <div class="section-title">Education</div>
+    <div class="edu-item">
+      <h3>Bachelor of Science (BSc) in Computer Science</h3>
+      <div class="school">Federal University of Petroleum Resources, Effurun (FUPRE)</div>
+      <div class="details">Second Class Upper Division · CGPA 3.81</div>
+      <div class="details" style="margin-top:6px">Final-year project: Enhancing Stock Price Prediction in the Nigerian Banking Sector Using Ensemble Machine Learning Models.</div>
+    </div>
+  </div>
+
+  <!-- ADDITIONAL -->
+  <div class="section">
+    <div class="section-title">Additional Experience</div>
+    <div class="edu-item">
+      <h3>Technical Content and Visual Design</h3>
+      <div class="details">Educational content, explainers, and visual assets for technical and Web3 audiences, built with Figma, Canva, GitBook, and Notion. Mentoring and community-focused communication round out the profile.</div>
+    </div>
+  </div>
+
+</div>
+
+<a class="back-btn" href="index.html" title="Back to portfolio">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+</a>
+
+</body>
+</html>

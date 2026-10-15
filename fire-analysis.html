@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>London Fire Brigade Incident Analysis · Martin Owoade</title>
+<meta name="description" content="Full case study: 358,338 London Fire Brigade incidents in PostgreSQL, demand by hour, day, borough, and year, plus data-quality findings.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --fire: #E5484D;
+    --ember: #F5A524;
+    --blue: #5B8DEF;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  @keyframes growY{ from{ transform: scaleY(0); } to{ transform: scaleY(1); } }
+  @keyframes growX{ from{ transform: scaleX(0); } to{ transform: scaleX(1); } }
+  @keyframes drawLine{ to{ stroke-dashoffset: 0; } }
+  @keyframes fadeIn{ from{ opacity: 0; } to{ opacity: 1; } }
+  .fig-v rect{ transform-box: fill-box; transform-origin: bottom; animation: growY .9s cubic-bezier(.2,.7,.2,1) both; }
+  .fig-h rect{ transform-box: fill-box; transform-origin: left; animation: growX .9s cubic-bezier(.2,.7,.2,1) both; }
+  .drawline{ stroke-dasharray: 1700; stroke-dashoffset: 1700; animation: drawLine 1.8s ease-out .2s forwards; }
+  .drawline2{ stroke-dasharray: 1700; stroke-dashoffset: 1700; animation: drawLine 1.8s ease-out .5s forwards; }
+  .drawline3{ stroke-dasharray: 1700; stroke-dashoffset: 1700; animation: drawLine 1.8s ease-out .8s forwards; }
+  .fig-fade svg{ animation: fadeIn 1.1s ease both; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .key-results{
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin: 36px 0 8px;
+  }
+  @media (max-width: 640px){ .key-results{ grid-template-columns: repeat(2, 1fr); } }
+  .kr{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+  }
+  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--fire); }
+  .kr .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 4px; }
+
+  article{ padding: 24px 0 40px; }
+  .chapter{ margin-bottom: 56px; }
+  .chapter .chnum{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 8px; }
+  .chapter h2{
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem); letter-spacing: -0.01em; margin-bottom: 18px;
+  }
+  .chapter h3{
+    font-family: var(--font-display); font-size: 17px; font-weight: 600;
+    margin: 26px 0 10px; color: var(--paper);
+  }
+  .chapter p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 68ch; }
+  .chapter p strong{ color: var(--paper); font-weight: 600; }
+  .chapter ul, .chapter ol{ color: var(--paper-dim); margin: 0 0 14px 20px; max-width: 66ch; }
+  .chapter li{ margin-bottom: 6px; }
+  .chapter li strong{ color: var(--paper); }
+  .chapter code{
+    font-family: var(--font-mono); font-size: 0.88em;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 7px; color: var(--teal);
+  }
+  table{
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 14px; background: var(--ink-card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  thead th{
+    font-family: var(--font-mono); font-size: 12px; font-weight: 400;
+    color: var(--signal); text-align: left; padding: 12px 16px;
+    border-bottom: 1px solid var(--line-strong); background: rgba(255,159,28,0.05);
+  }
+  tbody td{ padding: 11px 16px; border-bottom: 1px solid var(--line); color: var(--paper-dim); }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody td:first-child{ color: var(--paper); }
+  tbody td.num, thead th.num{ text-align: right; font-family: var(--font-mono); font-size: 13px; }
+  tbody tr.hl td{ color: var(--teal); }
+  .callout{
+    border-left: 3px solid var(--fire); background: var(--ink-card);
+    border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    border-radius: 0 14px 14px 0; padding: 18px 22px; margin: 20px 0;
+    color: var(--paper-dim); font-size: 15px;
+  }
+  .callout strong{ color: var(--paper); }
+  .callout .big{ font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--paper); display: block; margin-bottom: 4px; }
+  blockquote{
+    border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 20px 0;
+    font-family: var(--font-display); font-size: 19px; color: var(--paper); max-width: 60ch;
+  }
+  figure{ margin: 22px 0; }
+  figure svg{ width: 100%; height: auto; display: block; background: var(--ink-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  figcaption{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-top: 10px; text-align: center; }
+  .conclusion{
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    border-radius: 20px; padding: 36px; margin-bottom: 60px;
+  }
+  .conclusion h2{
+    font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .conclusion p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 66ch; }
+  .conclusion p strong{ color: var(--paper); }
+  .back-row{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 80px; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="sql.html" onclick="if(history.length>1){history.back();return false;}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/london-fire-incidents-analysis" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      View on GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">case study · postgresql · 358k incidents</div>
+      <h1>London Fire Brigade Incident Analysis</h1>
+      <p class="lede">When does London call the fire brigade, and for what? I worked with <strong style="color:var(--paper)">358,338 incident records from January 2024 onward</strong> in PostgreSQL to map demand by category, borough, hour, weekday, and year. The headline finding: only about 1 in 7 calls is a fire.</p>
+
+      <div class="key-results">
+        <div class="kr"><div class="n">358,338</div><div class="t">incidents analyzed</div></div>
+        <div class="kr"><div class="n">86.45%</div><div class="t">false alarm + special</div></div>
+        <div class="kr"><div class="n">21,341</div><div class="t">calls at 18:00 peak</div></div>
+        <div class="kr"><div class="n">+14.38%</div><div class="t">steepest 2026 monthly rise</div></div>
+      </div>
+    </div>
+
+    <article>
+      <!-- 01 Data -->
+      <section class="chapter" id="data">
+        <div class="chnum">01 · the data</div>
+        <h2>One download, two tables, 39 columns.</h2>
+        <p>The records come from the London Datastore release covering 2024 onward: incident dates and times, categories, property details, boroughs, coordinates, attendance times, stations, pump counts, and estimated costs. I loaded the source into PostgreSQL and kept two tables: <code>lfb_incidents_raw</code> preserves the original import untouched, while <code>lfb_incidents_clean</code> carries the prepared analysis data. Nothing was overwritten.</p>
+        <p>Validation came first. All 358,338 rows carry an incident number with <strong>zero duplicate rows</strong>. Missing incident groups (150) became <strong>Unknown</strong>. Latitude and longitude are missing in <strong>221,313 rows (61.8%)</strong>, which limits map-based analysis. First-pump attendance time is missing in 18,654 rows, and those were kept as missing rather than filled with zero, since no measurement is not the same as an instant response. Checked numeric fields held no negative values.</p>
+        <p>One scope note for every chart below. The data runs from <strong>January 2024 to July 2026</strong>, about two and a half years. August to December figures therefore rest on two years while January to July rest on nearly three, so cross-month totals are not directly comparable.</p>
+      </section>
+
+      <!-- Q1 Mix -->
+      <section class="chapter" id="mix">
+        <div class="chnum">02 · what london calls about</div>
+        <h2>Most calls are not fires.</h2>
+        <p>False alarms lead at <strong>164,095 incidents (45.79%)</strong>, with special services next at <strong>145,693 (40.66%)</strong>. Together that is <strong>86.45% of all records</strong>. Actual fires total 48,400, or 13.51%. Judging brigade workload by fires alone misses six sevenths of the work.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 220" role="img" aria-label="Horizontal bar chart of incidents by group: false alarm 45.79, special service 40.66, fire 13.51 percent">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">share of 358,338 incidents (%)</text>
+            <text x="0" y="60" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">False Alarm</text>
+            <rect x="150" y="46" width="340" height="20" rx="5" fill="#E5484D"/>
+            <text x="494" y="62" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">45.79</text>
+            <text x="0" y="110" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Special Service</text>
+            <rect x="150" y="96" width="302" height="20" rx="5" fill="#FF9F1C"/>
+            <text x="456" y="112" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">40.66</text>
+            <text x="0" y="160" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Fire</text>
+            <rect x="150" y="146" width="100" height="20" rx="5" fill="#38BDF8"/>
+            <text x="254" y="162" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">13.51</text>
+            <text x="0" y="210" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Unknown</text>
+            <rect x="150" y="196" width="3" height="20" rx="2" fill="#A9AFA0" opacity="0.6"/>
+            <text x="157" y="212" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.04</text>
+          </svg>
+          <figcaption>False alarms plus special services: 86.45% of the workload.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Incident group</th><th class="num">Incidents</th><th class="num">Share</th></tr></thead>
+          <tbody>
+            <tr><td>False Alarm</td><td class="num">164,095</td><td class="num">45.79%</td></tr>
+            <tr><td>Special Service</td><td class="num">145,693</td><td class="num">40.66%</td></tr>
+            <tr><td>Fire</td><td class="num">48,400</td><td class="num">13.51%</td></tr>
+            <tr><td>Unknown</td><td class="num">150</td><td class="num">0.04%</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Q2 Hourly -->
+      <section class="chapter" id="hourly">
+        <div class="chnum">03 · the daily rhythm</div>
+        <h2>Demand bottoms at 5 AM and peaks at 6 PM.</h2>
+        <p>Calls fall overnight to <strong>6,244 at 05:00</strong>, climb all day, and top out at <strong>21,341 at 18:00</strong> before easing into the night. Each category follows the same curve with its own peak: false alarms hit 9,327 at 18:00, fires 3,530 at 18:00, and special services 8,891 at 17:00. Staffing that ignores this curve will be thin exactly when London calls most.</p>
+        <figure>
+          <svg viewBox="0 0 560 270" role="img" aria-label="Line chart of incidents by hour, lowest at 5 AM with 6244 and highest at 6 PM with 21341">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">incidents by hour of day</text>
+            <line x1="40" y1="60" x2="540" y2="60" stroke="rgba(237,234,217,0.12)"/>
+            <line x1="40" y1="98" x2="540" y2="98" stroke="rgba(237,234,217,0.12)"/>
+            <line x1="40" y1="135" x2="540" y2="135" stroke="rgba(237,234,217,0.12)"/>
+            <line x1="40" y1="173" x2="540" y2="173" stroke="rgba(237,234,217,0.12)"/>
+            <line x1="40" y1="210" x2="540" y2="210" stroke="rgba(237,234,217,0.25)"/>
+            <text x="4" y="63" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">20K</text>
+            <text x="8" y="101" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">15K</text>
+            <text x="8" y="138" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">10K</text>
+            <text x="12" y="176" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">5K</text>
+            <polyline class="drawline" points="40.0,118 61.7,131 83.5,146 105.2,154 127.0,158 148.7,163 170.4,156 192.2,142 213.9,121 235.7,103 257.4,90 279.1,78 300.9,73 322.6,68 344.3,67 366.1,64 387.8,59 409.6,52 431.3,50 453.0,51 474.8,56 496.5,67 518.3,84 540.0,102" fill="none" stroke="#E5484D" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle cx="431.3" cy="50" r="4.5" fill="#FF9F1C"/>
+            <text x="440" y="36" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="start">peak 21,341</text>
+            <circle cx="148.7" cy="163" r="4" fill="#38BDF8"/>
+            <text x="80" y="182" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="start">05:00 low: 6,244</text>
+            <text x="40" y="232" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">0</text>
+            <text x="170" y="232" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">6</text>
+            <text x="301" y="232" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">12</text>
+            <text x="431" y="232" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">18</text>
+            <text x="540" y="232" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="end">23</text>
+          </svg>
+          <figcaption>Quiet at dawn, busiest at dinner time, every category alike.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Category peak</th><th class="num">Hour</th><th class="num">Incidents</th></tr></thead>
+          <tbody>
+            <tr><td>False alarms</td><td class="num">18:00</td><td class="num">9,327</td></tr>
+            <tr><td>Fires</td><td class="num">18:00</td><td class="num">3,530</td></tr>
+            <tr><td>Special services</td><td class="num">17:00</td><td class="num">8,891</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Q3 Weekday + boroughs -->
+      <section class="chapter" id="places">
+        <div class="chnum">04 · days and boroughs</div>
+        <h2>Saturday leads by total. Per day, weekends edge it.</h2>
+        <p>Saturday recorded the most incidents at 52,419 and Sunday the fewest at 49,845, with weekdays spread between 50,546 and 52,119. Adjusted for the 675 weekdays and 268 weekend days observed, weekends average <strong>381.58 incidents per day against 379.37 on weekdays</strong>, a gap of 0.58%. The difference is real but small, so it should not drive staffing on its own without further testing.</p>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 260" role="img" aria-label="Bar chart of incidents by weekday, Saturday highest at 52419 and Sunday lowest at 49845">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">incidents by day of week</text>
+            <line x1="63" y1="40" x2="63" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="63" y1="190" x2="497" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="63" y="45" width="50" height="145" rx="5" fill="#E5484D" opacity="0.85"/>
+            <rect x="127" y="44" width="50" height="146" rx="5" fill="#E5484D" opacity="0.9"/>
+            <rect x="191" y="43" width="50" height="147" rx="5" fill="#E5484D"/>
+            <rect x="255" y="45" width="50" height="145" rx="5" fill="#E5484D" opacity="0.9"/>
+            <rect x="319" y="41" width="50" height="149" rx="5" fill="#E5484D" opacity="0.95"/>
+            <rect x="383" y="40" width="50" height="150" rx="5" fill="#FF9F1C"/>
+            <rect x="447" y="47" width="50" height="143" rx="5" fill="#FF9F1C" opacity="0.75"/>
+            <text x="88" y="37" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">50.5K</text>
+            <text x="152" y="36" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">51.2K</text>
+            <text x="216" y="35" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">51.4K</text>
+            <text x="280" y="37" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">50.8K</text>
+            <text x="344" y="33" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">52.1K</text>
+            <text x="408" y="32" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">52.4K</text>
+            <text x="472" y="39" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">49.8K</text>
+            <text x="88" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Mon</text>
+            <text x="152" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Tue</text>
+            <text x="216" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Wed</text>
+            <text x="280" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Thu</text>
+            <text x="344" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Fri</text>
+            <text x="408" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Sat</text>
+            <text x="472" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Sun</text>
+          </svg>
+          <figcaption>Flat across the week. Saturday orange, the rest steady.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Day type</th><th class="num">Observed days</th><th class="num">Total incidents</th><th class="num">Average per day</th></tr></thead>
+          <tbody>
+            <tr><td>Weekday</td><td class="num">675</td><td class="num">256,074</td><td class="num">379.37</td></tr>
+            <tr><td>Weekend</td><td class="num">268</td><td class="num">102,264</td><td class="num">381.58</td></tr>
+          </tbody>
+        </table>
+        <h3>Westminster counts most, with a warning attached</h3>
+        <p><strong>Westminster recorded 23,332 incidents (6.51%)</strong>, far ahead of Lambeth at 16,039 and Southwark at 15,848. But these are raw counts. Population, daytime visitors, building density, and land use all differ by borough, and none are adjusted for here. Westminster is the right place to start investigating, not a verdict on risk.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 370" role="img" aria-label="Horizontal bar chart of top ten boroughs by incident count, Westminster highest at 23332">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">top 10 boroughs by incident count</text>
+            <text x="0" y="44" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">WESTMINSTER</text>
+            <rect x="150" y="30" width="340" height="20" rx="5" fill="#E5484D"/>
+            <text x="494" y="46" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">23,332</text>
+            <text x="0" y="76" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">LAMBETH</text>
+            <rect x="150" y="62" width="234" height="20" rx="5" fill="#E5484D" opacity="0.85"/>
+            <text x="388" y="78" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">16,039</text>
+            <text x="0" y="108" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">SOUTHWARK</text>
+            <rect x="150" y="94" width="231" height="20" rx="5" fill="#E5484D" opacity="0.8"/>
+            <text x="385" y="110" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">15,848</text>
+            <text x="0" y="140" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">TOWER HAMLETS</text>
+            <rect x="150" y="126" width="227" height="20" rx="5" fill="#E5484D" opacity="0.75"/>
+            <text x="381" y="142" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">15,557</text>
+            <text x="0" y="172" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">CAMDEN</text>
+            <rect x="150" y="158" width="223" height="20" rx="5" fill="#E5484D" opacity="0.7"/>
+            <text x="377" y="174" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">15,285</text>
+            <text x="0" y="204" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">CROYDON</text>
+            <rect x="150" y="190" width="217" height="20" rx="5" fill="#E5484D" opacity="0.65"/>
+            <text x="371" y="206" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">14,866</text>
+            <text x="0" y="236" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">HACKNEY</text>
+            <rect x="150" y="222" width="206" height="20" rx="5" fill="#E5484D" opacity="0.6"/>
+            <text x="360" y="238" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">14,138</text>
+            <text x="0" y="268" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">LEWISHAM</text>
+            <rect x="150" y="254" width="194" height="20" rx="5" fill="#E5484D" opacity="0.55"/>
+            <text x="348" y="270" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">13,342</text>
+            <text x="0" y="300" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">BARNET</text>
+            <rect x="150" y="286" width="187" height="20" rx="5" fill="#E5484D" opacity="0.5"/>
+            <text x="341" y="302" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">12,829</text>
+            <text x="0" y="332" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">EALING</text>
+            <rect x="150" y="318" width="180" height="20" rx="5" fill="#E5484D" opacity="0.45"/>
+            <text x="334" y="334" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">12,357</text>
+          </svg>
+          <figcaption>Westminster stands apart. Central boroughs cluster behind it.</figcaption>
+        </figure>
+      </section>
+
+      <!-- Q4 Monthly trends -->
+      <section class="chapter" id="yearly">
+        <div class="chnum">05 · months across years</div>
+        <h2>2026 runs hot in every month so far.</h2>
+        <p>January through July 2026 each beat the same month in 2025: January +7.20%, February +7.36%, March +4.30%, April +6.43%, May +14.38%, June +7.62%, July +12.66%. May and July stand out. This pattern deserves monitoring, but it is not proof of a long-term rise: reporting coverage for each month must be confirmed first, and August to December 2026 are not in the data yet.</p>
+        <figure>
+          <svg viewBox="0 0 560 270" role="img" aria-label="Line chart of monthly incidents for 2024, 2025 and 2026, with 2026 highest in every month shown">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">monthly incidents by year</text>
+            <line x1="60" y1="60" x2="540" y2="60" stroke="rgba(237,234,217,0.12)"/>
+            <text x="14" y="63" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">14K</text>
+            <line x1="60" y1="120" x2="540" y2="120" stroke="rgba(237,234,217,0.12)"/>
+            <text x="14" y="123" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">12K</text>
+            <line x1="60" y1="180" x2="540" y2="180" stroke="rgba(237,234,217,0.12)"/>
+            <text x="14" y="183" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">10K</text>
+            <line x1="60" y1="210" x2="540" y2="210" stroke="rgba(237,234,217,0.25)"/>
+            <text x="20" y="213" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">9K</text>
+            <polyline class="drawline" points="60,131 140,180 220,165 300,171 380,151 460,134 540,124" fill="none" stroke="#A9AFA0" stroke-width="2" stroke-linejoin="round" opacity="0.7"/>
+            <polyline class="drawline2" points="60,141 140,200 220,151 300,147 380,125 460,117 540,99" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linejoin="round" opacity="0.85"/>
+            <polyline class="drawline3" points="60,117 140,180 220,137 300,125 380,74 460,89 540,51" fill="none" stroke="#E5484D" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <line x1="60" y1="36" x2="80" y2="36" stroke="#A9AFA0" stroke-width="2" opacity="0.7"/>
+            <text x="86" y="40" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">2024</text>
+            <line x1="60" y1="52" x2="80" y2="52" stroke="#38BDF8" stroke-width="2" opacity="0.85"/>
+            <text x="86" y="56" font-family="Space Mono, monospace" font-size="11" fill="#38BDF8">2025</text>
+            <line x1="60" y1="68" x2="80" y2="68" stroke="#E5484D" stroke-width="2.5"/>
+            <text x="86" y="72" font-family="Space Mono, monospace" font-size="11" fill="#E5484D">2026</text>
+            <text x="60" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">Jan</text>
+            <text x="140" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">Feb</text>
+            <text x="220" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">Mar</text>
+            <text x="300" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">Apr</text>
+            <text x="380" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">May</text>
+            <text x="460" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">Jun</text>
+            <text x="540" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="end">Jul</text>
+          </svg>
+          <figcaption>2026 sits above both prior years in all seven months.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Month</th><th class="num">2025</th><th class="num">2026</th><th class="num">Change</th></tr></thead>
+          <tbody>
+            <tr><td>January</td><td class="num">11,292</td><td class="num">12,105</td><td class="num">+7.20%</td></tr>
+            <tr><td>February</td><td class="num">9,320</td><td class="num">10,006</td><td class="num">+7.36%</td></tr>
+            <tr><td>March</td><td class="num">10,978</td><td class="num">11,450</td><td class="num">+4.30%</td></tr>
+            <tr><td>April</td><td class="num">11,107</td><td class="num">11,821</td><td class="num">+6.43%</td></tr>
+            <tr><td>May</td><td class="num">11,827</td><td class="num">13,528</td><td class="num">+14.38%</td></tr>
+            <tr><td>June</td><td class="num">12,095</td><td class="num">13,017</td><td class="num">+7.62%</td></tr>
+            <tr><td>July</td><td class="num">12,699</td><td class="num">14,307</td><td class="num">+12.66%</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Q5 Response + gaps -->
+      <section class="chapter" id="response">
+        <div class="chnum">06 · response and gaps</div>
+        <h2>Fires get the fastest first pump, barely.</h2>
+        <p>First-pump attendance averages <strong>341 seconds for fires, 338 for special services, and 317 for false alarms</strong>, with medians of 318, 321, and 298 seconds. The gaps between categories are small, around 20 seconds. Any response-time comparison must report valid observation counts: 162,748 false alarms, 129,059 special services, and 47,858 fires carried a measured time.</p>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 250" role="img" aria-label="Grouped bar chart of average and median first-pump attendance time by incident group, around five and a half minutes">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">first-pump attendance (seconds) · light = average, solid = median</text>
+            <line x1="110" y1="40" x2="110" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="110" y1="190" x2="520" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="130" y="51" width="55" height="139" rx="5" fill="#E5484D" opacity="0.55"/>
+            <rect x="190" y="59" width="55" height="131" rx="5" fill="#E5484D"/>
+            <rect x="280" y="41" width="55" height="149" rx="5" fill="#FF9F1C" opacity="0.55"/>
+            <rect x="340" y="49" width="55" height="141" rx="5" fill="#FF9F1C"/>
+            <rect x="430" y="40" width="55" height="150" rx="5" fill="#38BDF8" opacity="0.55"/>
+            <rect x="490" y="50" width="30" height="140" rx="5" fill="#38BDF8"/>
+            <text x="157" y="43" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">317</text>
+            <text x="217" y="51" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">298</text>
+            <text x="307" y="33" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">338</text>
+            <text x="367" y="41" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">321</text>
+            <text x="457" y="32" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">341</text>
+            <text x="505" y="42" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">318</text>
+            <text x="157" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">False Alarm</text>
+            <text x="217" y="222" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">avg / med</text>
+            <text x="307" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Special Svc</text>
+            <text x="367" y="222" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">avg / med</text>
+            <text x="457" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Fire</text>
+            <text x="505" y="222" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">avg / med</text>
+          </svg>
+          <figcaption>Average and median sit close: about five and a half minutes.</figcaption>
+        </figure>
+        <p>Two data gaps limit what can be claimed. Coordinates are missing in <strong>221,313 rows (61.8%)</strong>, so precise mapping is off the table and borough analysis carries the geography instead. Attendance times are missing in 18,654 rows. Both gaps should be tracked by incident group and date to check whether they cluster anywhere.</p>
+      </section>
+
+      <!-- Recommendations -->
+      <section class="chapter" id="recommend">
+        <div class="chnum">07 · recommendations</div>
+        <h2>Five next steps, in priority order.</h2>
+        <ol>
+          <li><strong>Staff the 17:00 to 19:00 window first.</strong> Demand looks highest between 5 PM and 7 PM, so check whether staffing and vehicles cover those hours. Do not judge by raw totals alone. Look at average demand on a typical day, how long crews take to arrive, and how many appliances are free. One hundred calls spread over a month is a different problem from one hundred calls in a single evening.</li>
+          <li><strong>Take false alarms apart.</strong> They are the largest category, so break them down by property type, location, and time of day to see which ones could be prevented. A shop or office block that triggers repeated false alarms may point to faulty detectors or poor maintenance, but the data must carry those details before anyone names a cause.</li>
+          <li><strong>Adjust borough counts for exposure.</strong> A borough with the most incidents is not automatically the riskiest. More residents, buildings, businesses, and daytime visitors will naturally produce more calls. Compare counts against population, building density, and daytime footfall, for example incidents per 10,000 residents, before ranking boroughs or directing resources.</li>
+          <li><strong>Keep watching 2026 month by month.</strong> Track each month against the same month last year, but first confirm the data is complete. A partial year cannot be fairly compared with a full one, and late or missing records can fake a trend. Only call it growth when coverage checks out.</li>
+          <li><strong>Monitor the missing data.</strong> Check whether gaps cluster anywhere: coordinates missing more in some boroughs, attendance times missing more in busy periods or certain months. Gaps like these are rarely random, and dropping those rows quietly can bias everything built on top of them.</li>
+        </ol>
+      </section>
+    </article>
+
+    <section class="conclusion">
+      <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">the bottom line</div>
+      <h2>Most calls are not fires. Evenings are busiest. 2026 bears watching.</h2>
+      <p>False alarms and special services make up 86.45% of records. Demand peaks at 18:00 and barely moves between weekdays and weekends. Westminster leads on raw counts with the usual caveats. January through July 2026 each beat 2025, led by May at +14.38%. Missing coordinates and attendance times set the limits on mapping and response analysis.</p>
+      <blockquote>Count everything, adjust for exposure, and fix the data gaps that block the next question.</blockquote>
+    </section>
+
+    <div class="back-row">
+      <a class="btn btn-primary" href="sql.html" onclick="if(history.length>1){history.back();return false;}">Back</a>
+      <a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/london-fire-incidents-analysis" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

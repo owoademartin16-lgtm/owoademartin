@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank Customer Churn Prediction &amp; Retention Analysis · Martin Owoade</title>
+<meta name="description" content="Full analysis write-up: predicting bank customer churn for 10,000 customers with segmentation, classification modeling and retention strategy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --gold: #D4AF37;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .key-results{
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin: 36px 0 8px;
+  }
+  @media (max-width: 640px){ .key-results{ grid-template-columns: repeat(2, 1fr); } }
+  .kr{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+  }
+  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--gold); }
+  .kr .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 4px; }
+
+  article{ padding: 24px 0 40px; }
+  .chapter{ margin-bottom: 56px; }
+  .chapter .chnum{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 8px; }
+  .chapter h2{
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem); letter-spacing: -0.01em; margin-bottom: 18px;
+  }
+  .chapter h3{
+    font-family: var(--font-display); font-size: 17px; font-weight: 600;
+    margin: 26px 0 10px; color: var(--paper);
+  }
+  .chapter p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 68ch; }
+  .chapter p strong{ color: var(--paper); font-weight: 600; }
+  .chapter ul, .chapter ol{ color: var(--paper-dim); margin: 0 0 14px 20px; max-width: 66ch; }
+  .chapter li{ margin-bottom: 6px; }
+  .chapter li strong{ color: var(--paper); }
+  .chapter code{
+    font-family: var(--font-mono); font-size: 0.88em;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 7px; color: var(--teal);
+  }
+  .chapter pre{
+    font-family: var(--font-mono); font-size: 13px; line-height: 1.65;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px 22px; margin: 18px 0;
+    overflow-x: auto; color: var(--paper);
+  }
+  .chapter pre .cm{ color: var(--paper-dim); }
+  table{
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 14px; background: var(--ink-card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  thead th{
+    font-family: var(--font-mono); font-size: 12px; font-weight: 400;
+    color: var(--signal); text-align: left; padding: 12px 16px;
+    border-bottom: 1px solid var(--line-strong); background: rgba(255,159,28,0.05);
+  }
+  tbody td{ padding: 11px 16px; border-bottom: 1px solid var(--line); color: var(--paper-dim); }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody td:first-child{ color: var(--paper); }
+  tbody td.num, thead th.num{ text-align: right; font-family: var(--font-mono); font-size: 13px; }
+  .callout{
+    border-left: 3px solid var(--gold); background: var(--ink-card);
+    border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    border-radius: 0 14px 14px 0; padding: 18px 22px; margin: 20px 0;
+    color: var(--paper-dim); font-size: 15px;
+  }
+  .callout strong{ color: var(--paper); }
+  blockquote{
+    border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 20px 0;
+    font-family: var(--font-display); font-size: 19px; color: var(--paper); max-width: 60ch;
+  }
+  .conclusion{
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    border-radius: 20px; padding: 36px; margin-bottom: 60px;
+  }
+  .conclusion h2{
+    font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .conclusion p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 66ch; }
+  .conclusion p strong{ color: var(--paper); }
+  .back-row{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 80px; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to portfolio
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/bank-customer-churn-prediction" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      View on GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">case study · classification · retention analytics</div>
+      <h1>Bank Customer Churn Prediction &amp; Retention Analysis</h1>
+      <p class="lede">Customer churn is one of the most expensive problems for a retail bank. Losing a customer does not only mean losing an account. It can also mean losing deposits, product revenue, transaction activity, and future opportunities to deepen the relationship.</p>
+      <p class="lede">In this project, I analyzed <strong style="color:var(--paper)">10,000 bank customers</strong> across France, Germany, and Spain to understand why customers leave, identify high-risk customer segments, and build a machine learning model capable of predicting churn before an account is closed. The final objective was not simply to achieve a high model accuracy. It was to create a model that helps a bank identify customers who may need attention and use those predictions to support targeted retention strategies.</p>
+
+      <div class="key-results">
+        <div class="kr"><div class="n">10,000</div><div class="t">customers analyzed</div></div>
+        <div class="kr"><div class="n">20.4%</div><div class="t">overall churn rate</div></div>
+        <div class="kr"><div class="n">84%</div><div class="t">model accuracy</div></div>
+        <div class="kr"><div class="n">0.63</div><div class="t">churn f1-score</div></div>
+      </div>
+
+    </div>
+
+    <article>
+      <!-- Ch 1 -->
+      <section class="chapter" id="ch1">
+        <div class="chnum">chapter 01</div>
+        <h2>Understanding the Customer Base</h2>
+        <p>The first stage of the analysis was to understand who the bank's customers were. The dataset contained demographic, financial, geographic, and behavioral information including:</p>
+        <ul>
+          <li>Credit Score, Gender, Age, Tenure, Balance</li>
+          <li>Number of Products, Credit Card ownership, Active membership</li>
+          <li>Estimated Salary, Geography, Churn status</li>
+        </ul>
+        <p>The customer base was distributed across three countries:</p>
+        <table>
+          <thead><tr><th>Country</th><th class="num">Share of Customers</th></tr></thead>
+          <tbody>
+            <tr><td>France</td><td class="num">50.1%</td></tr>
+            <tr><td>Germany</td><td class="num">25.1%</td></tr>
+            <tr><td>Spain</td><td class="num">24.8%</td></tr>
+          </tbody>
+        </table>
+        <p>France represented approximately half of the customer base, while Germany and Spain each represented approximately one quarter. The gender distribution was relatively balanced, although males represented a slightly larger proportion of customers.</p>
+        <p>The median customer age was <strong>37 years</strong>, while the mean was approximately <strong>38.9 years</strong>. Average estimated salary was similar across the three countries.</p>
+        <p>At first glance, the bank appeared to have a relatively stable customer base. However, comparing retained and churned customers revealed much more important differences.</p>
+      </section>
+
+      <!-- Ch 2 -->
+      <section class="chapter" id="ch2">
+        <div class="chnum">chapter 02</div>
+        <h2>What Does a Churned Customer Look Like?</h2>
+        <p>I separated customers into two groups (<code>Retained = 0</code> and <code>Churned = 1</code>), then compared the characteristics of both groups. Three patterns stood out.</p>
+        <h3>Age</h3>
+        <p>Retained customers had an average age of approximately <strong>37.4 years</strong>. Churned customers averaged <strong>44.8 years</strong>, a difference of approximately <strong>7.4 years</strong>.</p>
+        <p>This does not mean age itself causes churn. Instead, it suggests that age is an important variable associated with customer behavior and should be considered when identifying customers at risk. For the bank, this could mean that older customers require different products, services, or relationship-management strategies than younger customers.</p>
+        <h3>Account Balance</h3>
+        <p>Churned customers had an average balance of approximately <strong>$91,109</strong>, compared with <strong>$72,745</strong> for retained customers.</p>
+        <p>This was particularly important from a business perspective. The bank is not simply losing customers with small balances. It is potentially losing customers holding substantially more money. A customer with a high balance may represent a significantly greater financial opportunity or risk than a low-balance customer. Therefore, churn prediction can be used not only to identify <em>who might leave</em>, but also to help prioritize <em>which customers should receive retention attention first</em>.</p>
+        <h3>Customer Activity</h3>
+        <p>One of the strongest behavioral differences was customer activity. Approximately <strong>55% of retained customers were active</strong>, compared with only <strong>36% of churned customers</strong>.</p>
+        <p>This suggests a strong relationship between engagement and churn. From a business perspective, this is particularly useful because activity is something a bank can potentially influence. Instead of waiting until a customer closes their account, the bank could monitor declining engagement and trigger an earlier intervention.</p>
+      </section>
+
+      <!-- Ch 3 -->
+      <section class="chapter" id="ch3">
+        <div class="chnum">chapter 03</div>
+        <h2>The Geographic Divide</h2>
+        <p>The country-level analysis revealed an even more significant difference:</p>
+        <table>
+          <thead><tr><th>Metric</th><th class="num">France</th><th class="num">Spain</th><th class="num">Germany</th></tr></thead>
+          <tbody>
+            <tr><td>Average Balance</td><td class="num">~$62,092</td><td class="num">~$61,818</td><td class="num">~$119,730</td></tr>
+            <tr><td>Zero-Balance Accounts</td><td class="num">48.2%</td><td class="num">48.4%</td><td class="num">0%</td></tr>
+            <tr><td>Churn Rate</td><td class="num">16.2%</td><td class="num">16.7%</td><td class="num">32.4%</td></tr>
+          </tbody>
+        </table>
+        <p>France and Spain showed very similar patterns. Approximately half of customers in both countries had zero balances, and their churn rates were around 16%.</p>
+        <p>Germany was very different. German customers had an average balance of approximately <strong>$119,730</strong>, almost twice the average observed in France and Spain, while churning at <strong>32.4%</strong>. Germany represents a smaller proportion of the customer base than France, but the customers who are leaving appear to represent considerably more deposited capital.</p>
+        <p>The data does not tell us exactly <em>why</em> German customers churn at a higher rate. Possible explanations could include differences in product preferences, customer expectations, competition, service experience, or other factors not captured in the dataset. Rather than assuming the cause, I treat Germany as a <strong>priority market for further investigation and retention analysis</strong>.</p>
+      </section>
+
+      <!-- Ch 4 -->
+      <section class="chapter" id="ch4">
+        <div class="chnum">chapter 04</div>
+        <h2>Customer Segmentation</h2>
+        <p>I also explored customer segments by combining demographic, geographic, product, and activity characteristics. Four operational groups emerged:</p>
+        <table>
+          <thead><tr><th>Segment</th><th class="num">Customers</th><th class="num">Churn Rate</th><th>Risk</th></tr></thead>
+          <tbody>
+            <tr><td>Low-Risk Core</td><td class="num">6,624</td><td class="num">8.56%</td><td>Low</td></tr>
+            <tr><td>Older Single-Product</td><td class="num">2,231</td><td class="num">45.18%</td><td>High</td></tr>
+            <tr><td>Inactive German</td><td class="num">819</td><td class="num">22.22%</td><td>High</td></tr>
+            <tr><td>Multi-Product At-Risk</td><td class="num">326</td><td class="num">85.89%</td><td>Critical</td></tr>
+          </tbody>
+        </table>
+        <h3>Multi-Product At-Risk</h3>
+        <p>The smallest but most concerning segment. Only 326 customers belonged to this group, but its churn rate was approximately <strong>85.9%</strong>. Rather than assuming that owning multiple products causes churn, the finding could indicate problems with product bundling, customer-product fit, fees, service experience, or another factor not captured by the available variables. For the bank, this segment would warrant immediate investigation.</p>
+        <h3>Older Single-Product Customers</h3>
+        <p>This segment contained <strong>2,231 customers</strong>, making it one of the largest high-risk groups, with a churn rate of approximately <strong>45.2%</strong>. Because the segment is large, even a modest improvement in retention could prevent a substantial number of account closures. Possible retention strategies could include relationship-management programs, retirement planning services, savings products, or personalized financial advice.</p>
+        <h3>Inactive German Customers</h3>
+        <p>This segment contained <strong>819 customers</strong> with a churn rate of approximately <strong>22.2%</strong>. The combination of German geography, inactivity, and the country's high average account balance makes this segment particularly important. A bank could use customer activity signals to identify these customers before they reach the point of account closure.</p>
+      </section>
+
+      <!-- Ch 5 -->
+      <section class="chapter" id="ch5">
+        <div class="chnum">chapter 05</div>
+        <h2>Preparing the Data for Machine Learning</h2>
+        <p>After completing the exploratory analysis, I moved from understanding churn to predicting it. The target variable was <code>Exited</code>, where <code>0 = Retained</code> and <code>1 = Churned</code>.</p>
+        <h3>Encoding Categorical Variables</h3>
+        <p>Gender was converted into a numerical representation. Geography was one-hot encoded into separate binary columns (<code>Geography_Germany</code> and <code>Geography_Spain</code>), with France as the reference category:</p>
+        <table>
+          <thead><tr><th>Geography</th><th class="num">Germany</th><th class="num">Spain</th></tr></thead>
+          <tbody>
+            <tr><td>France</td><td class="num">0</td><td class="num">0</td></tr>
+            <tr><td>Germany</td><td class="num">1</td><td class="num">0</td></tr>
+            <tr><td>Spain</td><td class="num">0</td><td class="num">1</td></tr>
+          </tbody>
+        </table>
+        <p>This allowed the model to distinguish customers from each country without assigning an artificial numerical ranking. The final model features were:</p>
+        <pre>features = [
+    'CreditScore',
+    'Gender',
+    'Age',
+    'Tenure',
+    'Balance',
+    'NumOfProducts',
+    'HasCrCard',
+    'IsActiveMember',
+    'EstimatedSalary',
+    'Geography_Germany',
+    'Geography_Spain'
+]</pre>
+      </section>
+
+      <!-- Ch 6 -->
+      <section class="chapter" id="ch6">
+        <div class="chnum">chapter 06</div>
+        <h2>Feature Scaling</h2>
+        <p>Numerical variables were placed on a comparable scale before model training. Critically, the scaler was fitted <strong>only on the training data</strong>, then used to transform the test data, preventing information from the test set from influencing preprocessing.</p>
+        <p>The scaler was saved alongside the final model so the exact same preprocessing is applied to new customers. The prediction pipeline is therefore:</p>
+        <pre>Customer Input
+      ↓
+Categorical Encoding
+      ↓
+Feature Ordering
+      ↓
+Saved Scaler
+      ↓
+Random Forest Model
+      ↓
+Churn Probability
+      ↓
+Customer Risk Assessment</pre>
+      </section>
+
+      <!-- Ch 7 -->
+      <section class="chapter" id="ch7">
+        <div class="chnum">chapter 07</div>
+        <h2>Comparing Machine Learning Models</h2>
+        <p>I did not want to select a model simply because it produced the highest accuracy. The business objective is to identify customers who are likely to churn, and because churn is the minority class, accuracy alone can be misleading. A model could score well by predicting that most customers stay, while missing the customers the bank actually needs to contact.</p>
+        <p>I therefore focused on <strong>precision, recall, F1-score, accuracy, and the confusion matrix</strong>. For the churned class, recall is especially important: a false negative means the model predicted a customer would stay, but the customer actually churned, leaving without ever receiving a retention intervention.</p>
+      </section>
+
+      <!-- Ch 8 -->
+      <section class="chapter" id="ch8">
+        <div class="chnum">chapter 08</div>
+        <h2>CatBoost vs Random Forest</h2>
+        <h3>CatBoost</h3>
+        <table>
+          <thead><tr><th>Metric</th><th class="num">Churned Customers</th></tr></thead>
+          <tbody>
+            <tr><td>Precision</td><td class="num">53%</td></tr>
+            <tr><td>Recall</td><td class="num">74%</td></tr>
+            <tr><td>F1-score</td><td class="num">62%</td></tr>
+          </tbody>
+        </table>
+        <p>Its recall of <strong>74%</strong> was particularly attractive for a retention use case. However, precision of <strong>53%</strong> meant many customers flagged as churners would never actually churn. The confusion matrix was:</p>
+        <pre><span class="cm"># [[true stay, false alarm], [missed churner, caught churner]]</span>
+[[1325, 268],
+ [ 105, 302]]</pre>
+        <p>The model identified <strong>302 of the 407 churned customers</strong>.</p>
+      </section>
+
+      <!-- Ch 9 -->
+      <section class="chapter" id="ch9">
+        <div class="chnum">chapter 09</div>
+        <h2>Why I Selected Random Forest</h2>
+        <table>
+          <thead><tr><th>Metric</th><th class="num">Retained</th><th class="num">Churned</th></tr></thead>
+          <tbody>
+            <tr><td>Precision</td><td class="num">91%</td><td class="num">60%</td></tr>
+            <tr><td>Recall</td><td class="num">89%</td><td class="num">67%</td></tr>
+            <tr><td>F1-score</td><td class="num">90%</td><td class="num">63%</td></tr>
+          </tbody>
+        </table>
+        <p>Overall accuracy was <strong>84%</strong>, with the confusion matrix:</p>
+        <pre>[[1410, 183],
+ [ 133, 274]]</pre>
+        <p>The model correctly identified <strong>274 of the 407 churned customers</strong>. Although CatBoost had better churn recall, Random Forest provided a better overall balance between precision, recall, F1-score, and accuracy, and that distinction matters in a real banking environment.</p>
+        <p>If the model flags too many customers who were never going to leave, the bank wastes money on unnecessary discounts, incentives, calls, and relationship-management resources. If it is too conservative, the bank fails to identify valuable customers before they leave. Random Forest offered the more balanced compromise, so I selected it as the <strong>final model</strong>.</p>
+      </section>
+
+      <!-- Ch 10 -->
+      <section class="chapter" id="ch10">
+        <div class="chnum">chapter 10</div>
+        <h2>Why Accuracy Was Not Enough</h2>
+        <p>The final model achieved <strong>84% accuracy</strong>, but accuracy was not the main reason for selecting it. The dataset is imbalanced, with retained customers significantly outnumbering churned customers. The more important results were <strong>churn precision of 60%, churn recall of 67%, and churn F1-score of 63%</strong>: the model identified approximately two-thirds of the customers who actually churned, and about 60% of flagged customers were actual churners.</p>
+        <p>In a real bank, the prediction threshold would not necessarily remain fixed. It would move with the cost of intervention. If retention campaigns are inexpensive, prioritize recall and catch more at-risk customers. If they are expensive, prioritize precision and focus on the strongest churn probabilities. The model therefore provides a <strong>risk probability that supports different business strategies</strong>, not just a yes/no prediction.</p>
+      </section>
+
+      <!-- Ch 11 -->
+      <section class="chapter" id="ch11">
+        <div class="chnum">chapter 11</div>
+        <h2>From Prediction to Business Action</h2>
+        <p>The purpose of the model is not to predict churn for the sake of prediction. The real value comes from what the bank does with the prediction.</p>
+        <h3>High churn probability + high balance</h3>
+        <p>Prioritize these customers for immediate relationship-manager intervention, protecting valuable deposits and understanding the dissatisfaction.</p>
+        <h3>High churn probability + low activity</h3>
+        <p>Trigger a re-engagement campaign:</p>
+        <ul>
+          <li>Personalized digital banking offers</li>
+          <li>Product education</li>
+          <li>Relationship-manager contact</li>
+          <li>Relevant financial products</li>
+          <li>Service feedback requests</li>
+        </ul>
+        <h3>High churn probability + older + single product</h3>
+        <p>Offer personalized financial planning and relationship-management services to increase engagement and uncover unmet financial needs.</p>
+        <h3>High churn probability + Germany</h3>
+        <p>Given the higher churn rate and higher average balance among German customers, these predictions receive additional priority, alongside investigation into whether product offerings, pricing, digital services, or customer experience differ from France and Spain.</p>
+      </section>
+
+      <!-- Ch 12 -->
+      <section class="chapter" id="ch12">
+        <div class="chnum">chapter 12</div>
+        <h2>Deployment</h2>
+        <p>To make the model usable beyond the notebook, I built a Streamlit application called <strong>Customer Retention Intelligence</strong>. It loads the saved <code>random_forest_model.pkl</code> and <code>scaler.pkl</code>, processes customer information with the same feature structure and preprocessing used during training, and returns a <strong>churn prediction, churn probability, risk category, and retention recommendation</strong>, turning the model into a decision-support tool rather than leaving it inside a Jupyter notebook.</p>
+      </section>
+    </article>
+
+    <section class="conclusion">
+      <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">executive conclusion</div>
+      <h2>Churn is concentrated, so retention can be targeted.</h2>
+      <p>The analysis showed that bank churn is not evenly distributed: older age, higher balances, lower activity, German geography, and certain product combinations were all strongly associated with higher churn, and small segments carried disproportionately high risk. These patterns proved predictable before account closure.</p>
+      <p>After comparing classifiers, Random Forest provided the best balance for the business objective at <strong>84% accuracy and a 63% F1-score for churned customers</strong>.</p>
+      <blockquote>Can the bank use the predictions to decide which customers need attention, and do so in a way that makes financial sense?</blockquote>
+      <p>That is where the analysis moves from machine learning into business decision-making.</p>
+    </section>
+
+    <div class="back-row">
+      <a class="btn btn-primary" href="index.html#projects">Back to projects</a>
+      <a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/bank-customer-churn-prediction" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

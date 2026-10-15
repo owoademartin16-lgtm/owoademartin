@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYC Taxi Fare &amp; Revenue Analysis · Martin Owoade</title>
+<meta name="description" content="Full analysis write-up: 3.47 million NYC taxi trips, revenue patterns, and a LightGBM fare prediction model at R² 0.948.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --blue: #5B8DEF;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .key-results{
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin: 36px 0 8px;
+  }
+  @media (max-width: 640px){ .key-results{ grid-template-columns: repeat(2, 1fr); } }
+  .kr{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+  }
+  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--blue); }
+  .kr .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 4px; }
+
+  article{ padding: 24px 0 40px; }
+  .chapter{ margin-bottom: 56px; }
+  .chapter .chnum{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 8px; }
+  .chapter h2{
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem); letter-spacing: -0.01em; margin-bottom: 18px;
+  }
+  .chapter h3{
+    font-family: var(--font-display); font-size: 17px; font-weight: 600;
+    margin: 26px 0 10px; color: var(--paper);
+  }
+  .chapter p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 68ch; }
+  .chapter p strong{ color: var(--paper); font-weight: 600; }
+  .chapter ul, .chapter ol{ color: var(--paper-dim); margin: 0 0 14px 20px; max-width: 66ch; }
+  .chapter li{ margin-bottom: 6px; }
+  .chapter li strong{ color: var(--paper); }
+  .chapter code{
+    font-family: var(--font-mono); font-size: 0.88em;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 7px; color: var(--teal);
+  }
+  .chapter pre{
+    font-family: var(--font-mono); font-size: 13px; line-height: 1.65;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px 22px; margin: 18px 0;
+    overflow-x: auto; color: var(--paper);
+  }
+  table{
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 14px; background: var(--ink-card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  thead th{
+    font-family: var(--font-mono); font-size: 12px; font-weight: 400;
+    color: var(--signal); text-align: left; padding: 12px 16px;
+    border-bottom: 1px solid var(--line-strong); background: rgba(255,159,28,0.05);
+  }
+  tbody td{ padding: 11px 16px; border-bottom: 1px solid var(--line); color: var(--paper-dim); }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody td:first-child{ color: var(--paper); }
+  tbody td.num, thead th.num{ text-align: right; font-family: var(--font-mono); font-size: 13px; }
+  tbody tr.best td{ color: var(--teal); }
+  .callout{
+    border-left: 3px solid var(--blue); background: var(--ink-card);
+    border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    border-radius: 0 14px 14px 0; padding: 18px 22px; margin: 20px 0;
+    color: var(--paper-dim); font-size: 15px;
+  }
+  .callout strong{ color: var(--paper); }
+  .callout .big{ font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--paper); display: block; margin-bottom: 4px; }
+  blockquote{
+    border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 20px 0;
+    font-family: var(--font-display); font-size: 19px; color: var(--paper); max-width: 60ch;
+  }
+  figure{ margin: 22px 0; }
+  figure svg{ width: 100%; height: auto; display: block; background: var(--ink-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  figcaption{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-top: 10px; text-align: center; }
+  .conclusion{
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    border-radius: 20px; padding: 36px; margin-bottom: 60px;
+  }
+  .conclusion h2{
+    font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .conclusion p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 66ch; }
+  .conclusion p strong{ color: var(--paper); }
+  .back-row{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 80px; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to portfolio
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/nyc-taxi-fare-analysis-prediction" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      View on GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">case study · regression · 3.47m trips</div>
+      <h1>NYC Taxi Fare &amp; Revenue Analysis</h1>
+      <p class="lede">How much revenue does a taxi network generate in a month, when is demand highest, and can the total fare of a trip be predicted before it is completed? To answer these questions, I analyzed <strong style="color:var(--paper)">3,475,204 NYC taxi trips</strong> recorded during <strong style="color:var(--paper)">January 2025</strong>, combining data cleaning, exploratory analysis, feature engineering, and machine learning.</p>
+
+      <div class="key-results">
+        <div class="kr"><div class="n">3.47M</div><div class="t">trips analyzed</div></div>
+        <div class="kr"><div class="n">$90.34M</div><div class="t">january revenue</div></div>
+        <div class="kr"><div class="n">0.948</div><div class="t">best r² (lightgbm)</div></div>
+        <div class="kr"><div class="n">$2.61</div><div class="t">mean error per trip</div></div>
+      </div>
+    </div>
+
+    <article>
+      <!-- Overview table -->
+      <section class="chapter" id="overview">
+        <div class="chnum">dataset at a glance</div>
+        <h2>Project Overview</h2>
+        <p>The dataset contained trip distance, passenger count, payment type, pickup and drop-off locations, rate codes, timestamps, and total fare.</p>
+        <table>
+          <thead><tr><th>Metric</th><th class="num">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Total Trips</td><td class="num"><strong>3,475,204</strong></td></tr>
+            <tr><td>Period</td><td class="num"><strong>January 1 to 31, 2025</strong></td></tr>
+            <tr><td>Total Revenue</td><td class="num"><strong>$90,335,708.80</strong></td></tr>
+            <tr><td>Average Trip Fare</td><td class="num"><strong>$25.99</strong></td></tr>
+            <tr><td>Prediction Target</td><td class="num"><strong>Total Amount</strong></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Ch 1 -->
+      <section class="chapter" id="ch1">
+        <div class="chnum">chapter 01</div>
+        <h2>Preparing 3.47 Million Taxi Trips</h2>
+        <p>Working with more than three million records required careful data cleaning before any analysis or modeling. I examined the dataset for missing values, duplicates, invalid values, and inconsistent records.</p>
+        <p>Five columns each had <strong>540,149 missing values (15.5% of rows)</strong>: passenger count, rate code, store-and-forward flag, congestion surcharge, and airport fee. Rather than blindly filling them, I examined the structure of the missing records first, then filled passenger count with the median and the remaining columns with their modes or medians as appropriate.</p>
+        <table>
+          <thead><tr><th>Column</th><th class="num">Missing Rows</th><th class="num">Share</th></tr></thead>
+          <tbody>
+            <tr><td>passenger_count</td><td class="num">540,149</td><td class="num">15.5%</td></tr>
+            <tr><td>RatecodeID</td><td class="num">540,149</td><td class="num">15.5%</td></tr>
+            <tr><td>store_and_fwd_flag</td><td class="num">540,149</td><td class="num">15.5%</td></tr>
+            <tr><td>congestion_surcharge</td><td class="num">540,149</td><td class="num">15.5%</td></tr>
+            <tr><td>Airport_fee</td><td class="num">540,149</td><td class="num">15.5%</td></tr>
+          </tbody>
+        </table>
+        <p>I also investigated negative fare values, since a negative <code>total_amount</code> does not represent a normal completed passenger trip, and removed invalid records. After cleaning, I created time-based variables from the pickup timestamp:</p>
+        <pre>Year, Month, Day, DayOfWeek, Hour, DayType</pre>
+        <p>These features made it possible to investigate how taxi activity and revenue changed throughout the day and across the week.</p>
+      </section>
+
+      <!-- Ch 2 -->
+      <section class="chapter" id="ch2">
+        <div class="chnum">chapter 02</div>
+        <h2>How Much Revenue Did NYC Taxi Trips Generate?</h2>
+        <div class="callout"><span class="big">$90,335,708.80</span>Total taxi revenue across 3,475,204 January 2025 trips, at an average fare of $25.99.</div>
+        <p>This immediately demonstrated the scale of the transportation system in the dataset. But total revenue alone does not tell us when or how that revenue was generated, so I analyzed revenue and trip volume across different time periods.</p>
+      </section>
+
+      <!-- Ch 3 -->
+      <section class="chapter" id="ch3">
+        <div class="chnum">chapter 03</div>
+        <h2>When Was Taxi Demand Highest?</h2>
+        <p>The clearest pattern appeared when trips were grouped by hour. The highest trip volume occurred around <strong>6 PM with more than 253,000 trips</strong>, which fits the evening commute as the working day ends and evening activity begins.</p>
+        <p>Interestingly, the hour with the highest average fare was different: <strong>5 AM at $25.67 average fare</strong>. This demonstrates an important distinction between <strong>demand volume</strong> and <strong>trip value</strong>. An hour can generate many trips without producing the highest average fare. For a transportation company, these are two different business questions:</p>
+        <blockquote>When do we need the most vehicles? And when are individual trips most valuable?</blockquote>
+      </section>
+
+      <!-- Ch 4 -->
+      <section class="chapter" id="ch4">
+        <div class="chnum">chapter 04</div>
+        <h2>Daily Revenue Patterns</h2>
+        <div class="callout"><span class="big">January 16: 134,000 trips · $3.64M revenue</span>The strongest single day in the dataset. Monitoring daily demand like this lets operators spot unusually strong or weak periods instead of relying on monthly totals alone.</div>
+      </section>
+
+      <!-- Ch 5 -->
+      <section class="chapter" id="ch5">
+        <div class="chnum">chapter 05</div>
+        <h2>Weekday vs Weekend Behavior</h2>
+        <p>Weekday transportation dominates the network, consistent with a system driven by commuting and regular weekday activity. Weekend trips remain significant and may have different demand characteristics, which matters for vehicle availability, driver scheduling, and demand forecasting.</p>
+        <figure>
+          <svg viewBox="0 0 560 190" role="img" aria-label="Bar chart: weekday 2.49 million trips versus weekend 840 thousand trips">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">trips (millions)</text>
+            <text x="120" y="70" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Weekday</text>
+            <rect x="120" y="80" width="400" height="26" rx="6" fill="#5B8DEF"/>
+            <text x="524" y="99" font-family="Space Mono, monospace" font-size="12" fill="#EDEAD9" text-anchor="start">2.49M</text>
+            <text x="120" y="140" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Weekend</text>
+            <rect x="120" y="150" width="135" height="26" rx="6" fill="#FF9F1C"/>
+            <text x="259" y="169" font-family="Space Mono, monospace" font-size="12" fill="#EDEAD9" text-anchor="start">840K</text>
+          </svg>
+          <figcaption>Weekday trips outnumber weekend trips roughly 3 to 1.</figcaption>
+        </figure>
+      </section>
+
+      <!-- Ch 6 -->
+      <section class="chapter" id="ch6">
+        <div class="chnum">chapter 06</div>
+        <h2>Does the Day of the Week Affect Fare Value?</h2>
+        <p>The highest average fare occurred on <strong>Monday at $21.39</strong>. Trip frequency and trip value do not necessarily move together, and understanding that distinction helps transportation companies make better operational decisions.</p>
+      </section>
+
+      <!-- Ch 7 -->
+      <section class="chapter" id="ch7">
+        <div class="chnum">chapter 07</div>
+        <h2>Building a Fare Prediction Model</h2>
+        <p>After the exploratory analysis, I moved from understanding the data to predicting the total fare of an individual trip. The target variable was <code>total_amount</code>, using trip and time information available about each ride: passenger count, trip distance, rate code, pickup and drop-off locations, payment type, store-and-forward flag, plus engineered time features.</p>
+        <div class="callout"><strong>Avoiding leakage.</strong> Fare components that directly add up to the total (fare amount, tip, tolls, taxes, surcharges, fees) were removed from the inputs, so the model learns pricing patterns instead of arithmetic. The target was also capped at $300 and trips limited to plausible distance and passenger ranges.</div>
+        <p>The data was split <strong>80/20 into train and test sets</strong>, and categorical time features were one-hot encoded. The objective was simple:</p>
+        <blockquote>Can we estimate the final taxi fare using information available about the trip?</blockquote>
+      </section>
+
+      <!-- Ch 8 -->
+      <section class="chapter" id="ch8">
+        <div class="chnum">chapter 08</div>
+        <h2>Model Comparison</h2>
+        <p>I tested several regression approaches rather than assuming one algorithm would perform best. Results improved clearly as models got better at capturing nonlinear relationships.</p>
+        <table>
+          <thead><tr><th>Model</th><th class="num">R²</th><th class="num">MAE</th><th class="num">RMSE</th></tr></thead>
+          <tbody>
+            <tr><td>Linear Regression</td><td class="num">0.859</td><td class="num">$4.13</td><td class="num">$7.56</td></tr>
+            <tr><td>HistGradientBoosting</td><td class="num">0.947</td><td class="num">$2.62</td><td class="num">$4.62</td></tr>
+            <tr class="best"><td>LightGBM</td><td class="num">0.948</td><td class="num">$2.61</td><td class="num">$4.57</td></tr>
+          </tbody>
+        </table>
+        <figure>
+          <svg viewBox="0 0 560 230" role="img" aria-label="Bar chart comparing R²: Linear Regression 0.859, HistGradientBoosting 0.947, LightGBM 0.948">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">R² (test) · axis 0.80 to 1.00</text>
+            <line x1="60" y1="30" x2="60" y2="180" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="60" y1="180" x2="540" y2="180" stroke="rgba(237,234,217,0.25)"/>
+            <text x="8" y="184" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.80</text>
+            <text x="8" y="110" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.90</text>
+            <text x="8" y="38" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">1.00</text>
+            <rect x="110" y="151" width="90" height="29" rx="5" fill="#A9AFA0"/>
+            <rect x="250" y="63" width="90" height="117" rx="5" fill="#5B8DEF"/>
+            <rect x="390" y="61" width="90" height="119" rx="5" fill="#3DDC97"/>
+            <text x="155" y="198" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Linear 0.859</text>
+            <text x="295" y="198" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">HistGB 0.947</text>
+            <text x="435" y="198" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">LGBM 0.948</text>
+            <text x="155" y="145" font-family="Space Mono, monospace" font-size="10" fill="#0E1512" text-anchor="middle">0.859</text>
+            <text x="295" y="80" font-family="Space Mono, monospace" font-size="10" fill="#0E1512" text-anchor="middle">0.947</text>
+            <text x="435" y="78" font-family="Space Mono, monospace" font-size="10" fill="#0E1512" text-anchor="middle">0.948</text>
+          </svg>
+          <figcaption>Tree-based boosting models clearly beat the linear baseline.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 560 230" role="img" aria-label="Bar chart comparing MAE in dollars: Linear Regression 4.13, HistGradientBoosting 2.62, LightGBM 2.61">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">MAE ($) · lower is better</text>
+            <line x1="60" y1="30" x2="60" y2="180" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="60" y1="180" x2="540" y2="180" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="110" y="55" width="90" height="125" rx="5" fill="#A9AFA0"/>
+            <rect x="250" y="100" width="90" height="80" rx="5" fill="#5B8DEF"/>
+            <rect x="390" y="101" width="90" height="79" rx="5" fill="#3DDC97"/>
+            <text x="155" y="198" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Linear $4.13</text>
+            <text x="295" y="198" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">HistGB $2.62</text>
+            <text x="435" y="198" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">LGBM $2.61</text>
+          </svg>
+          <figcaption>Boosting cut the average prediction error by more than a third.</figcaption>
+        </figure>
+      </section>
+
+      <!-- Ch 9 -->
+      <section class="chapter" id="ch9">
+        <div class="chnum">chapter 09</div>
+        <h2>Why LightGBM Performed Best</h2>
+        <p>Taxi fares contain nonlinear relationships. A $5 increase in trip distance does not produce the same fare increase for every type of trip, and fare behavior shifts with rate code, location, distance, passenger count, time, and payment type. Tree-based boosting algorithms capture these interactions well: LightGBM builds many decision trees sequentially, each new tree correcting errors made by previous trees, learning complex patterns without requiring every interaction to be specified by hand.</p>
+        <p>Two checks backed up the result. Trip distance alone correlated with the total fare at <strong>0.92</strong>, confirming distance as the dominant signal. And the final model scored <strong>R² 0.950 on training data versus 0.948 on test data</strong>, showing it learned general patterns rather than memorizing trips.</p>
+      </section>
+
+      <!-- Ch 10 -->
+      <section class="chapter" id="ch10">
+        <div class="chnum">chapter 10</div>
+        <h2>From Prediction to Business Value</h2>
+        <p>The model has applications beyond simply predicting a fare:</p>
+        <h3>Detect unusual fares</h3>
+        <p>If the predicted fare differs significantly from the recorded fare, the trip can be flagged for investigation.</p>
+        <h3>Improve fare estimation</h3>
+        <p>Estimated fares can be provided to passengers before or during a journey.</p>
+        <h3>Support revenue analysis</h3>
+        <p>The model helps identify which combinations of distance, location, time, and rate type contribute most strongly to fare value.</p>
+        <h3>Improve operational planning</h3>
+        <p>Combined with demand analysis, fare predictions help operators understand not only where demand is high, but also where and when trips generate greater revenue.</p>
+      </section>
+
+      <!-- Ch 11 -->
+      <section class="chapter" id="ch11">
+        <div class="chnum">chapter 11</div>
+        <h2>Deployment</h2>
+        <p>The project went beyond the notebook with a Streamlit application where a user enters trip information and receives an estimated fare:</p>
+        <pre>Trip Information
+       ↓
+Feature Preparation
+       ↓
+Trained LightGBM Model
+       ↓
+Predicted Total Fare
+       ↓
+Fare Estimate</pre>
+        <p>Two manual checks of the deployed model behaved sensibly: a short 1.3-mile Saturday afternoon trip for 3 passengers predicted <strong>$15.64</strong>, while a 2.5-mile Friday afternoon solo trip predicted <strong>$26.43</strong>.</p>
+        <table>
+          <thead><tr><th>Trip</th><th class="num">Distance</th><th class="num">Passengers</th><th>When</th><th class="num">Predicted Fare</th></tr></thead>
+          <tbody>
+            <tr><td>Short city hop</td><td class="num">1.3 mi</td><td class="num">3</td><td>Saturday, 1 PM</td><td class="num">$15.64</td></tr>
+            <tr><td>Crosstown ride</td><td class="num">2.5 mi</td><td class="num">1</td><td>Friday, 2 PM</td><td class="num">$26.43</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
+
+    <section class="conclusion">
+      <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">final findings</div>
+      <h2>Volume and value peak at different times.</h2>
+      <p>The network generated approximately <strong>$90.34 million</strong> across more than <strong>3.47 million trips</strong>. Demand concentrated during the day, with <strong>6 PM</strong> recording the highest trip volume, yet the highest average fare occurred around <strong>5 AM</strong>. Weekdays dominated volume, while single days such as January 16 generated exceptional revenue.</p>
+      <p>On modeling, nonlinear tree-based models beat the linear approach clearly, with LightGBM at <strong>MAE $2.61, RMSE $4.57, and R² 0.948</strong>. The project combined descriptive analytics, predictive analytics, and business intelligence in one pipeline.</p>
+      <blockquote>A large dataset is not valuable simply because it contains millions of rows. The real value comes from turning those records into information that supports better decisions.</blockquote>
+    </section>
+
+    <div class="back-row">
+      <a class="btn btn-primary" href="index.html#projects">Back to projects</a>
+      <a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/nyc-taxi-fare-analysis-prediction" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

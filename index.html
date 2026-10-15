@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Martin Owoade · Data Analyst | Data Scientist</title>
+<meta name="description" content="Martin Owoade, Data Analyst and Data Scientist. Python, machine learning and dashboards that turn raw data into useful insights.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!--
+  ============================================================
+  EDIT YOUR LINKS HERE: one place, everything updates.
+  Replace the placeholders below, nothing else needs to move.
+  ============================================================
+  CONFIG (also mirrored in the <script> at the bottom of this file):
+  - GitHub profile : https://github.com/owoademartin16-lgtm
+  - Project repos  : taxi / cannabis / electricity / airbnb / hospital / bank / retail
+  - Live apps      : Streamlit links (all wired below)
+  - Email          : martinowoade16@gmail.com
+  - LinkedIn       : https://www.linkedin.com/in/owoade-martin-b00aa439b/
+  ============================================================
+-->
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --signal-dim: rgba(255,159,28,0.12);
+    --teal: #3DDC97;
+    --blue: #5B8DEF;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 1120px;
+    --radius: 16px;
+  }
+
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  /* subtle data-grid backdrop */
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; text-decoration: none; }
+
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+
+  /* ---------- nav ---------- */
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav.wrap{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .brand{ display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 600; font-size: 17px; }
+  .brand-mark{
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    display: flex; align-items: flex-end; justify-content: center; gap: 2.5px; padding-bottom: 7px;
+  }
+  .brand-mark span{ width: 3.5px; border-radius: 2px; background: var(--signal); }
+  .brand-mark span:nth-child(1){ height: 7px; }
+  .brand-mark span:nth-child(2){ height: 13px; }
+  .brand-mark span:nth-child(3){ height: 10px; }
+  .nav-links{ display: flex; gap: 30px; font-size: 14.5px; color: var(--paper-dim); }
+  .nav-links a{ padding: 4px 0; border-bottom: 1px solid transparent; transition: color .2s, border-color .2s; }
+  .nav-links a:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-right{ display: flex; align-items: center; gap: 12px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 14px; color: var(--paper-dim);
+    border: 1px solid var(--line-strong); border-radius: 999px; padding: 8px 16px;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+  .menu-btn{
+    display: none; background: none; border: 1px solid var(--line-strong);
+    border-radius: 10px; color: var(--paper); padding: 8px 11px; cursor: pointer;
+    font-family: var(--font-mono); font-size: 13px;
+  }
+  @media (max-width: 860px){
+    .nav-links, .nav-right .nav-gh{ display: none; }
+    .menu-btn{ display: block; }
+    .nav-links.open{
+      display: flex; position: absolute; top: 70px; left: 0; right: 0;
+      flex-direction: column; gap: 0; background: var(--ink-card);
+      border-bottom: 1px solid var(--line); padding: 8px 28px 18px;
+    }
+    .nav-links.open a{ padding: 10px 0; border-bottom: 1px solid var(--line); }
+  }
+
+  /* ---------- hero ---------- */
+  .hero{ padding: 170px 0 90px; }
+  .hero-grid{ display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px; align-items: center; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1.name{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2.6rem, 5.5vw, 4rem);
+    line-height: 1.05; letter-spacing: -0.02em;
+  }
+  .title-line{
+    font-family: var(--font-mono); font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+    color: var(--signal); margin-top: 12px;
+  }
+  .lede{ margin-top: 20px; font-size: 16.5px; color: var(--paper-dim); max-width: 48ch; }
+  .hero-actions{ margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background .2s, color .2s, border-color .2s, transform .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); transform: translateY(-1px); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); transform: translateY(-1px); }
+  .hero-stats{ margin-top: 40px; display: flex; gap: 36px; flex-wrap: wrap; }
+  .hero-stats .stat .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+  .hero-stats .stat .n em{ font-style: normal; color: var(--signal); }
+  .hero-stats .stat .t{ font-family: var(--font-mono); font-size: 11.5px; color: var(--paper-dim); }
+
+  .panel{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 20px; padding: 24px;
+  }
+  .panel-head{
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim);
+    padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+  }
+  .panel-head .live{ display: flex; align-items: center; gap: 6px; color: var(--teal); }
+  .live-dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+  .chart{ width: 100%; height: auto; display: block; margin-bottom: 16px; }
+  .readouts{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .readout{ border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; }
+  .readout .label{ font-family: var(--font-mono); font-size: 10.5px; color: var(--paper-dim); }
+  .readout .value{ font-family: var(--font-display); font-size: 18px; margin-top: 3px; }
+  .readout .value.good{ color: var(--teal); }
+
+  @media (max-width: 960px){
+    .hero{ padding: 130px 0 70px; }
+    .hero-grid{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- sections ---------- */
+  section.block{ padding: 88px 0; }
+  .sec-head{ margin-bottom: 48px; max-width: 640px; }
+  .sec-head .num{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 10px; }
+  .sec-head h2{ font-family: var(--font-display); font-weight: 600; font-size: clamp(1.6rem, 3vw, 2.1rem); letter-spacing: -0.01em; }
+  .sec-head p{ margin-top: 12px; color: var(--paper-dim); font-size: 15.5px; }
+
+  /* reveal on scroll */
+  .reveal{ opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.visible{ opacity: 1; transform: none; }
+
+  /* ---------- about ---------- */
+  .about-grid{ display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: start; }
+  .about-grid p{ color: var(--paper-dim); font-size: 15.5px; margin-bottom: 14px; max-width: 58ch; }
+  .about-grid p strong{ color: var(--paper); font-weight: 500; }
+  .about-tags{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .tag{
+    font-family: var(--font-mono); font-size: 12px; color: var(--paper);
+    border: 1px solid var(--line-strong); padding: 6px 13px; border-radius: 999px;
+  }
+  .tag.hot{ border-color: var(--signal); color: var(--signal); }
+  .about-card{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 24px;
+  }
+  .about-card h4{ font-family: var(--font-mono); font-size: 12px; color: var(--signal); margin-bottom: 14px; text-transform: lowercase; }
+  .about-card ul{ list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 14.5px; color: var(--paper-dim); }
+  .about-card li::before{ content: '▸ '; color: var(--teal); }
+  @media (max-width: 820px){ .about-grid{ grid-template-columns: 1fr; } }
+
+  /* ---------- projects ---------- */
+  .proj-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 820px){ .proj-grid{ grid-template-columns: 1fr; } }
+  .proj-card{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 20px; padding: 30px; display: flex; flex-direction: column;
+    transition: border-color .25s, transform .25s;
+  }
+  .proj-card:hover{ border-color: var(--line-strong); transform: translateY(-3px); }
+  .proj-card.featured{ grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+  @media (max-width: 820px){ .proj-card.featured{ grid-template-columns: 1fr; } }
+  .proj-meta{ display: flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11.5px; color: var(--paper-dim); margin-bottom: 14px; }
+  .proj-meta .dot{ width: 7px; height: 7px; border-radius: 50%; background: var(--accent, var(--signal)); }
+  .proj-card h3{ font-family: var(--font-display); font-size: 22px; font-weight: 600; margin-bottom: 10px; }
+  .proj-card .desc{ color: var(--paper-dim); font-size: 14.5px; margin-bottom: 16px; }
+  .pills{ display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+  .pill{
+    font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim);
+    border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px;
+  }
+  .metrics{
+    display: flex; gap: 22px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 14px 0; margin-bottom: 20px;
+  }
+  .metric .mv{ font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--teal); }
+  .metric .ml{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); }
+  .metric .ms{ font-size: 11.5px; color: var(--paper-dim); }
+  .proj-actions{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; }
+  .btn-sm{
+    font-size: 13.5px; font-weight: 500; padding: 9px 18px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--line-strong); color: var(--paper);
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .btn-sm:hover{ border-color: var(--signal); color: var(--signal); }
+  .btn-sm.solid{ background: var(--paper); border-color: var(--paper); color: var(--ink); }
+  .btn-sm.solid:hover{ background: var(--signal); border-color: var(--signal); color: var(--ink); }
+  .btn-sm svg{ width: 13px; height: 13px; }
+  .mini-chart{ width: 100%; height: auto; display: block; }
+
+  /* ---------- apps ---------- */
+  .apps-lede{ color: var(--paper-dim); font-size: 15.5px; max-width: 60ch; margin-bottom: 32px; }
+  .apps-lede code{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); }
+  .apps-grid{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 960px){ .apps-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px){ .apps-grid{ grid-template-columns: 1fr; } }
+  .app-card{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column;
+    transition: border-color .25s, transform .25s;
+  }
+  .app-card:hover{ border-color: var(--accent, var(--signal)); transform: translateY(-3px); }
+  .app-icon{
+    width: 40px; height: 40px; border-radius: 12px; margin-bottom: 16px;
+    background: var(--signal-dim); border: 1px solid var(--line-strong);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 15px; color: var(--signal);
+  }
+  .app-card h3{ font-family: var(--font-display); font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .app-card p{ font-size: 13.5px; color: var(--paper-dim); margin-bottom: 18px; flex-grow: 1; }
+
+  /* ---------- skills ---------- */
+  .skills-grid{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .skill-group{ background: var(--ink); padding: 26px 24px; }
+  .skill-group h4{ font-family: var(--font-mono); font-size: 12px; color: var(--signal); margin-bottom: 14px; text-transform: lowercase; }
+  .skill-group ul{ list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; color: var(--paper-dim); }
+  @media (max-width: 860px){ .skills-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px){ .skills-grid{ grid-template-columns: 1fr; } }
+
+  /* ---------- github band ---------- */
+  .gh-band{
+    border: 1px solid var(--line-strong); border-radius: 20px;
+    padding: 40px; display: flex; align-items: center; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap; background: var(--ink-card);
+  }
+  .gh-band h3{ font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .gh-band p{ color: var(--paper-dim); font-size: 14.5px; font-family: var(--font-mono); }
+
+  /* ---------- contact ---------- */
+  .contact h2{ font-family: var(--font-display); font-weight: 600; font-size: clamp(1.9rem, 4.5vw, 3rem); letter-spacing: -0.01em; max-width: 16ch; margin-bottom: 26px; }
+  .contact-email{
+    display: inline-block; font-family: var(--font-display); font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+    border-bottom: 1px solid var(--line-strong); padding-bottom: 8px;
+    transition: border-color .25s, color .25s;
+  }
+  .contact-email:hover{ border-color: var(--signal); color: var(--signal); }
+  .contact-grid{
+    margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--line); border: 1px solid var(--line);
+    border-radius: 18px; overflow: hidden;
+  }
+  .contact-tile{ background: var(--ink); padding: 24px; display: flex; flex-direction: column; gap: 6px; transition: background .25s; }
+  .contact-tile:hover{ background: var(--ink-card); }
+  .contact-tile .l{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); }
+  .contact-tile .v{ font-family: var(--font-display); font-size: 15.5px; word-break: break-word; }
+  .contact-tile:hover .v{ color: var(--signal); }
+  @media (max-width: 700px){ .contact-grid{ grid-template-columns: 1fr; } }
+
+  footer{ border-top: 1px solid var(--line); padding: 26px 0; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Main navigation">
+    <a class="brand" href="#home" aria-label="Martin Owoade home">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      Martin Owoade
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="#home">Home</a>
+      <a href="#about">About</a>
+      <a href="#projects">Projects</a>
+      <a href="#sql">SQL</a>
+      <a href="#apps">Apps</a>
+      <a href="#skills">Skills</a>
+      <a href="#cv">CV</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="nav-right">
+      <a class="nav-gh" data-link="profile" href="https://github.com/owoademartin16-lgtm" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+        GitHub
+      </a>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks">Menu</button>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero" id="home">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="kicker">data analyst · data scientist</div>
+        <h1 class="name">Martin Owoade</h1>
+        <div class="title-line">Data Analyst | Data Scientist</div>
+        <p class="lede">I work with data end to end: cleaning messy datasets, building analytical solutions, training machine learning models, and turning the results into insights people can actually use.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#projects">View My Projects</a>
+          <a class="btn btn-ghost" href="#apps">Explore My Apps</a>
+          <a class="btn btn-ghost" href="#contact">Contact Me</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><div class="n"><em>10</em></div><div class="t">projects shipped</div></div>
+          <div class="stat"><div class="n"><em>0.95</em></div><div class="t">best r² (taxi fares)</div></div>
+          <div class="stat"><div class="n"><em>6</em></div><div class="t">live streamlit apps</div></div>
+        </div>
+      </div>
+
+      <div class="panel" aria-label="Sample model output">
+        <div class="panel-head">
+          <span>model.output: fare_prediction</span>
+          <span class="live"><span class="live-dot"></span>fitted</span>
+        </div>
+        <svg class="chart" viewBox="0 0 320 130" role="img" aria-label="Stylised actual versus predicted values chart">
+          <g font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0">
+            <text x="0" y="12">actual vs predicted ($)</text>
+          </g>
+          <g>
+            <line x1="28" y1="20" x2="28" y2="110" stroke="rgba(237,234,217,0.2)"/>
+            <line x1="28" y1="110" x2="312" y2="110" stroke="rgba(237,234,217,0.2)"/>
+            <g fill="#5B8DEF" opacity="0.85">
+              <rect x="44" y="60" width="18" height="50" rx="3"/>
+              <rect x="88" y="44" width="18" height="66" rx="3"/>
+              <rect x="132" y="70" width="18" height="40" rx="3"/>
+              <rect x="176" y="38" width="18" height="72" rx="3"/>
+              <rect x="220" y="55" width="18" height="55" rx="3"/>
+            </g>
+            <g fill="none" stroke="#FF9F1C" stroke-width="2">
+              <polyline points="53,62 97,46 141,72 185,40 229,57 273,48"/>
+            </g>
+            <g fill="#FF9F1C">
+              <circle cx="53" cy="62" r="3"/><circle cx="97" cy="46" r="3"/><circle cx="141" cy="72" r="3"/><circle cx="185" cy="40" r="3"/><circle cx="229" cy="57" r="3"/><circle cx="273" cy="48" r="3"/>
+            </g>
+          </g>
+        </svg>
+        <div class="readouts">
+          <div class="readout"><div class="label">taxi r²</div><div class="value good">0.9484</div></div>
+          <div class="readout"><div class="label">taxi mae</div><div class="value">$2.61</div></div>
+          <div class="readout"><div class="label">sales r²</div><div class="value good">0.900</div></div>
+          <div class="readout"><div class="label">sales mae</div><div class="value">$4,444</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="block" id="about">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="num">01 · about</div>
+        <h2>Analyst first, model second.</h2>
+      </div>
+      <div class="about-grid reveal">
+        <div>
+          <p>I moved into data analytics because I kept running into the same problem: plenty of data, not enough clear answers. Now I spend my time <strong>cleaning datasets, exploring them properly, and building models</strong> that hold up on unseen data.</p>
+          <p>I studied <strong>Computer Science at the Federal University of Petroleum Resources (FUPRE), specializing in Data Science</strong>, which gave me the foundation for this work: programming, statistics, databases, and machine learning, applied to real datasets from day one.</p>
+          <p>My day-to-day stack is <strong>Python with Pandas and Scikit-learn</strong>, plus <strong>SQL, Power BI and Excel</strong> when the job calls for it. I like work I can measure. A lower error metric, a forecast that tracks reality, a dashboard someone actually opens.</p>
+          <p>Most of my projects end up as <strong>interactive Streamlit apps</strong>, so the model isn't trapped in a notebook: anyone can try it with their own inputs.</p>
+          <div class="about-tags">
+            <span class="tag hot">Python</span><span class="tag hot">Pandas</span><span class="tag hot">Scikit-learn</span>
+            <span class="tag">SQL</span><span class="tag">NumPy</span><span class="tag">Power BI</span>
+            <span class="tag">Excel</span><span class="tag">Streamlit</span>
+          </div>
+        </div>
+        <div class="about-card">
+          <h4>how i work</h4>
+          <ul>
+            <li>Explore first: plots before models</li>
+            <li>Time-aware splits for time data</li>
+            <li>Report MAE/RMSE, not just R²</li>
+            <li>Ship a demo, not just a notebook</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section class="block" id="projects">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="num">02 · projects</div>
+        <h2>Measured work, not promises.</h2>
+        <p>Every project below was evaluated on held-out data. Metrics shown are the real test scores.</p>
+      </div>
+
+      <div class="proj-grid">
+        <!-- 1. Taxi (featured) -->
+        <article class="proj-card featured reveal" style="--accent:#5B8DEF">
+          <div>
+            <div class="proj-meta"><span class="dot"></span>regression · best model: LightGBM</div>
+            <h3>NYC Taxi Fare Prediction</h3>
+            <p class="desc">A machine learning project that predicts NYC taxi trip fares using trip and time-related features.</p>
+            <div class="pills">
+              <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Scikit-learn</span>
+              <span class="pill">LightGBM</span><span class="pill">Machine Learning</span><span class="pill">Streamlit</span>
+            </div>
+            <div class="metrics">
+              <div class="metric"><div class="mv">0.9484</div><div class="ml">R² · test</div></div>
+              <div class="metric"><div class="mv">$2.61</div><div class="ml">MAE · test</div></div>
+              <div class="metric"><div class="mv">$4.57</div><div class="ml">RMSE · test</div></div>
+            </div>
+            <div class="proj-actions">
+              <a class="btn-sm solid" data-link="repo:taxi" href="https://github.com/owoademartin16-lgtm/nyc-taxi-fare-analysis-prediction" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+                GitHub
+              </a>
+              <a class="btn-sm" data-link="app:taxi" href="https://5f4vefgpj8tbxceqvkq5db.streamlit.app/" target="_blank" rel="noopener">
+                Live Demo
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+              </a>
+              <a class="btn-sm" href="taxi-analysis.html">Read Me
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </a>
+            </div>
+          </div>
+          <div>
+            <svg class="mini-chart" viewBox="0 0 320 170" role="img" aria-label="Stylised residual scatter around zero">
+              <text x="0" y="12" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0">residuals ≈ 0 · no pattern left</text>
+              <line x1="24" y1="90" x2="312" y2="90" stroke="rgba(237,234,217,0.25)" stroke-dasharray="4 4"/>
+              <g fill="#5B8DEF" opacity="0.7">
+                <circle cx="50" cy="86" r="3"/><circle cx="78" cy="94" r="3"/><circle cx="104" cy="88" r="3"/><circle cx="130" cy="96" r="3"/><circle cx="156" cy="84" r="3"/><circle cx="182" cy="92" r="3"/><circle cx="208" cy="87" r="3"/><circle cx="234" cy="95" r="3"/><circle cx="260" cy="89" r="3"/><circle cx="286" cy="93" r="3"/>
+                <circle cx="64" cy="102" r="2.4"/><circle cx="118" cy="78" r="2.4"/><circle cx="170" cy="104" r="2.4"/><circle cx="222" cy="76" r="2.4"/><circle cx="272" cy="100" r="2.4"/>
+              </g>
+              <text x="24" y="130" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0">predicted fare →</text>
+            </svg>
+          </div>
+        </article>
+
+        <!-- 2. Cannabis -->
+        <article class="proj-card reveal" style="--accent:#3DDC97">
+          <div class="proj-meta"><span class="dot"></span>time series · best model: Ridge Regression</div>
+          <h3>Cannabis Gross Sales Prediction</h3>
+          <p class="desc">A time-series machine learning project that predicts daily cannabis gross sales using historical sales patterns, lag features, rolling averages, and calendar features.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Scikit-learn</span>
+            <span class="pill">Machine Learning</span><span class="pill">Time Series</span><span class="pill">Streamlit</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">0.900</div><div class="ml">R² · test</div></div>
+            <div class="metric"><div class="mv">$4,444</div><div class="ml">MAE · test</div></div>
+            <div class="metric"><div class="mv">$5,615</div><div class="ml">RMSE · test</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:cannabis" href="https://github.com/owoademartin16-lgtm/Cannabis-Sales-Forecast" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" data-link="app:cannabis" href="https://cannabis-sales-forecast-lme6qisn44ovyokjmkvufd.streamlit.app/" target="_blank" rel="noopener">Live Demo
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+            </a>
+            <a class="btn-sm" href="cannabis-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- 3. Electricity -->
+        <article class="proj-card reveal" style="--accent:#FF9F1C">
+          <div class="proj-meta"><span class="dot"></span>forecasting · best model: Random Forest</div>
+          <h3>Electricity Load Forecasting</h3>
+          <p class="desc">A machine learning forecasting project that predicts electricity demand using historical load values, time features, and lag features.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Scikit-learn</span>
+            <span class="pill">Random Forest</span><span class="pill">Time Series</span><span class="pill">Streamlit</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">0.903</div><div class="ml">R² · test</div></div>
+            <div class="metric"><div class="mv">1,774 MW</div><div class="ml">MAE · test</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:electricity" href="https://github.com/owoademartin16-lgtm/electricity-forecast" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" data-link="app:electricity" href="https://electricity-forecast-azwujqtcenhzfpwb3hhlq7.streamlit.app/" target="_blank" rel="noopener">Live Demo
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+            </a>
+            <a class="btn-sm" href="electricity-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- 4. Airbnb -->
+        <article class="proj-card reveal" style="--accent:#FF5A5F">
+          <div class="proj-meta"><span class="dot"></span>regression · best model: CatBoost</div>
+          <h3>Amsterdam Airbnb Nightly Price Prediction</h3>
+          <p class="desc">A machine learning project that predicts Amsterdam Airbnb nightly prices from listing size, location, reviews, and host details.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Scikit-learn</span>
+            <span class="pill">CatBoost</span><span class="pill">Machine Learning</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">0.704</div><div class="ml">R² · test</div></div>
+            <div class="metric"><div class="mv">€83.32</div><div class="ml">MAE · test</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:airbnb" href="https://github.com/owoademartin16-lgtm/airbnb-price-prediction" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" data-link="app:airbnb" href="https://airbnb-price-prediction-cuoahebcuticj3p3b5gkse.streamlit.app/" target="_blank" rel="noopener">Live Demo
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+            </a>
+            <a class="btn-sm" href="airbnb-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- 5. Hospital -->
+        <article class="proj-card reveal" style="--accent:#38BDF8">
+          <div class="proj-meta"><span class="dot"></span>patient experience · 9-year trends</div>
+          <h3>Hospital Patient Experience (HCAHPS) Analysis</h3>
+          <p class="desc">Nine years of US hospital patient survey results across 10 care measures: what improved, what COVID reversed, and where hospitals should focus next.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Seaborn</span>
+            <span class="pill">HCAHPS</span><span class="pill">Healthcare Analytics</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">69.4%</div><div class="ml">2021 avg top-box</div></div>
+            <div class="metric"><div class="mv">51.0%</div><div class="ml">Lowest: Care Transition</div></div>
+            <div class="metric"><div class="mv">-2.8 pts</div><div class="ml">COVID drop 2019-21</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:hospital" href="https://github.com/owoademartin16-lgtm/HCAHPS-Patient-Experience-Analysis" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" href="hospital-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- 6. Bank Churn -->
+        <article class="proj-card reveal" style="--accent:#D4AF37">
+          <div class="proj-meta"><span class="dot"></span>classification · best model: Random Forest</div>
+          <h3>Bank Customer Churn Prediction</h3>
+          <p class="desc">A machine learning project that predicts whether a bank customer is likely to churn, presented as a customer retention risk assessment tool.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Scikit-learn</span>
+            <span class="pill">Random Forest</span><span class="pill">Machine Learning</span><span class="pill">Streamlit</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">0.84</div><div class="ml">Accuracy · test</div></div>
+            <div class="metric"><div class="mv">0.86</div><div class="ml">ROC-AUC · test</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:bank" href="https://github.com/owoademartin16-lgtm/bank-customer-churn-prediction" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" data-link="app:bank" href="https://bank-customer-churn-prediction-zksfbmzuvux9v7fgvcpygn.streamlit.app/" target="_blank" rel="noopener">Live Demo
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+            </a>
+            <a class="btn-sm" href="churn-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- 7. Retail -->
+        <article class="proj-card reveal" style="--accent:#A78BFA">
+          <div class="proj-meta"><span class="dot"></span>retail analytics · revenue strategy</div>
+          <h3>Retail Performance Analysis &amp; Sales Strategy</h3>
+          <p class="desc">An analysis of 125,751 retail transactions ($10.48M net revenue) mapping category concentration, seasonal demand waves, profit margins, and a CatBoost sales forecast.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">CatBoost</span>
+            <span class="pill">Forecasting</span><span class="pill">Seasonality</span><span class="pill">Strategy</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">$10.48M</div><div class="ml">Net revenue</div></div>
+            <div class="metric"><div class="mv">125,751</div><div class="ml">Transactions</div></div>
+            <div class="metric"><div class="mv">73.8%</div><div class="ml">Scholar line share</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:retail" href="https://github.com/owoademartin16-lgtm/retail-revenue-prediction-catboost" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" data-link="app:retail" href="https://retail-revenue-prediction-catboost-dyb8w8r5nsk8l5mdzsby8l.streamlit.app/" target="_blank" rel="noopener">Live Demo
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+            </a>
+            <a class="btn-sm" href="retail-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- SQL -->
+  <section class="block" id="sql">
+    <div class="wrap">
+      <div class="sec-head reveal" style="margin-bottom:24px">
+        <div class="num">03 · sql case studies</div>
+        <h2>Answers written in SQL.</h2>
+      </div>
+      <div class="about-grid reveal">
+        <div>
+          <p>Three end-to-end analyses in PostgreSQL: 2.92 million Iowa liquor records with a $76.75M duplicate finding, 358,338 London emergency incidents mapped by hour, day, borough, and year, and 150,000 Nigerian delivery records comparing couriers, routes, and cities.</p>
+          <p>All three projects question large tables with <strong>GROUP BY</strong>, window functions, and date logic, then validate the data before trusting any answer. Full write-ups with charts live inside.</p>
+          <p style="margin-top:20px"><a class="btn btn-primary" href="sql.html">View Full SQL Analysis</a></p>
+        </div>
+        <div class="about-card">
+          <h4>inside</h4>
+          <ul>
+            <li>Iowa liquor sales case study</li>
+            <li>Fire brigade incident case study</li>
+            <li>Delivery operations case study</li>
+            <li>Charts, tables, and methods</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPS -->
+  <section class="block" id="apps">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="num">04 · live data apps</div>
+        <h2>Don't take my word for it. Try the models.</h2>
+      </div>
+      <p class="apps-lede reveal">Each app below is a live Streamlit deployment of one of my machine learning projects. Type in your own inputs and get a prediction instantly. App links live in one <code>CONFIG</code> block at the bottom of this file, so they are easy to swap.</p>
+      <div class="apps-grid">
+        <div class="app-card reveal" style="--accent:#5B8DEF">
+          <div class="app-icon">$</div>
+          <h3>Taxi Fare Estimator</h3>
+          <p>Enter trip distance, passengers and pickup details for an instant NYC fare estimate.</p>
+          <a class="btn-sm" data-link="app:taxi" href="https://5f4vefgpj8tbxceqvkq5db.streamlit.app/" target="_blank" rel="noopener">Open App
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+          </a>
+        </div>
+        <div class="app-card reveal" style="--accent:#3DDC97">
+          <div class="app-icon">≋</div>
+          <h3>Sales Forecaster</h3>
+          <p>Pick a date and forecast daily gross sales from historical patterns and calendar effects.</p>
+          <a class="btn-sm" data-link="app:cannabis" href="https://cannabis-sales-forecast-lme6qisn44ovyokjmkvufd.streamlit.app/" target="_blank" rel="noopener">Open App
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+          </a>
+        </div>
+        <div class="app-card reveal" style="--accent:#FF9F1C">
+          <div class="app-icon">⚡</div>
+          <h3>Load Forecaster</h3>
+          <p>Predict hourly electricity demand from time features and historical load lags.</p>
+          <a class="btn-sm" data-link="app:electricity" href="https://electricity-forecast-azwujqtcenhzfpwb3hhlq7.streamlit.app/" target="_blank" rel="noopener">Open App
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+          </a>
+        </div>
+        <div class="app-card reveal" style="--accent:#D4AF37">
+          <div class="app-icon">◉</div>
+          <h3>Churn Prediction App</h3>
+          <p>Enter bank customer details for a churn-risk score, risk category, and retention recommendation.</p>
+          <a class="btn-sm" data-link="app:bank" href="https://bank-customer-churn-prediction-zksfbmzuvux9v7fgvcpygn.streamlit.app/" target="_blank" rel="noopener">Open App
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+          </a>
+        </div>
+        <div class="app-card reveal" style="--accent:#FF5A5F">
+          <div class="app-icon">⌂</div>
+          <h3>Price Estimator</h3>
+          <p>Enter Amsterdam listing details for an instant nightly price estimate.</p>
+          <a class="btn-sm" data-link="app:airbnb" href="https://airbnb-price-prediction-cuoahebcuticj3p3b5gkse.streamlit.app/" target="_blank" rel="noopener">Open App
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+          </a>
+        </div>
+        <div class="app-card reveal" style="--accent:#A78BFA">
+          <div class="app-icon">▦</div>
+          <h3>Retail Forecaster</h3>
+          <p>Pick a date and enter recent sales for an instant daily revenue forecast.</p>
+          <a class="btn-sm" data-link="app:retail" href="https://retail-revenue-prediction-catboost-dyb8w8r5nsk8l5mdzsby8l.streamlit.app/" target="_blank" rel="noopener">Open App
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section class="block" id="skills">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="num">05 · skills</div>
+        <h2>The working stack.</h2>
+      </div>
+      <div class="skills-grid reveal">
+        <div class="skill-group">
+          <h4>languages</h4>
+          <ul><li>Python</li><li>SQL</li></ul>
+        </div>
+        <div class="skill-group">
+          <h4>libraries</h4>
+          <ul><li>Pandas</li><li>NumPy</li><li>Scikit-learn</li></ul>
+        </div>
+        <div class="skill-group">
+          <h4>bi &amp; tools</h4>
+          <ul><li>Power BI</li><li>Excel</li><li>Streamlit</li><li>Git &amp; GitHub</li></ul>
+        </div>
+        <div class="skill-group">
+          <h4>methods</h4>
+          <ul><li>Machine Learning</li><li>Time Series</li><li>Data Visualization</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CV -->
+  <section class="block" id="cv">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="num">06 · curriculum vitae</div>
+        <h2>The short version.</h2>
+        <p>Background, experience, and education at a glance. Full detail lives on the resume page.</p>
+      </div>
+      <div class="about-grid reveal">
+        <div>
+          <p><strong>LTV Protocol (Remote, Ukraine - Portugal) · Technical Writer, DeFi Research Analyst &amp; Community Moderator</strong> (Mar 2025 to Apr 2026). Researched DeFi protocols and on-chain metrics with Dune Analytics and DeFiLlama, wrote technical documentation and guides, and ran community education and moderation.</p>
+          <p><strong>BSc Computer Science, Federal University of Petroleum Resources (FUPRE)</strong>, Second Class Upper Division (CGPA 3.81). Final-year project on stock price prediction in the Nigerian banking sector with ensemble machine learning.</p>
+          <p><a class="btn btn-primary" href="resume.html">View Full Resume</a></p>
+        </div>
+        <div class="about-card">
+          <h4>at a glance</h4>
+          <ul>
+            <li>BSc Computer Science, FUPRE</li>
+            <li>Python · SQL · Power BI · Excel</li>
+            <li>10 projects shipped</li>
+            <li>DeFi research &amp; technical writing</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GITHUB -->
+  <section class="block" id="github">
+    <div class="wrap">
+      <div class="gh-band reveal">
+        <div>
+          <h3>All code lives on GitHub.</h3>
+          <p data-link-text="profile">github.com/owoademartin16-lgtm</p>
+        </div>
+        <a class="btn btn-primary" data-link="profile" href="https://github.com/owoademartin16-lgtm" target="_blank" rel="noopener">Visit my GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="block contact" id="contact">
+    <div class="wrap">
+      <div class="sec-head reveal" style="margin-bottom:30px">
+        <div class="num">07 · contact</div>
+      </div>
+      <h2 class="reveal">Have data worth understanding? Let's talk.</h2>
+      <a class="contact-email reveal" data-link="email" href="mailto:martinowoade16@gmail.com">martinowoade16@gmail.com</a>
+      <div class="contact-grid reveal">
+        <a class="contact-tile" data-link="email" href="mailto:martinowoade16@gmail.com">
+          <span class="l">email</span>
+          <span class="v" data-link-text="email">martinowoade16@gmail.com</span>
+        </a>
+        <a class="contact-tile" data-link="profile" href="https://github.com/owoademartin16-lgtm" target="_blank" rel="noopener">
+          <span class="l">github</span>
+          <span class="v" data-link-text="profile">github.com/owoademartin16-lgtm</span>
+        </a>
+        <a class="contact-tile" data-link="linkedin" href="https://www.linkedin.com/in/owoade-martin-b00aa439b/" target="_blank" rel="noopener">
+          <span class="l">linkedin</span>
+          <span class="v">linkedin.com/in/owoade-martin-b00aa439b</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  /* ================================================================
+     CONFIG: replace these placeholders with your real links.
+     Every GitHub / app / contact link on this page updates itself.
+     ================================================================ */
+  const CONFIG = {
+    githubUser: "owoademartin16-lgtm",
+    repos: {
+      taxi: "nyc-taxi-fare-analysis-prediction",
+      cannabis: "Cannabis-Sales-Forecast",
+      electricity: "electricity-forecast",
+      airbnb: "airbnb-price-prediction",
+      hospital: "HCAHPS-Patient-Experience-Analysis",
+      bank: "bank-customer-churn-prediction",
+      retail: "retail-revenue-prediction-catboost"
+    },
+    apps: {
+      taxi: "https://5f4vefgpj8tbxceqvkq5db.streamlit.app/",
+      cannabis: "https://cannabis-sales-forecast-lme6qisn44ovyokjmkvufd.streamlit.app/",
+      electricity: "https://electricity-forecast-azwujqtcenhzfpwb3hhlq7.streamlit.app/",
+      bank: "https://bank-customer-churn-prediction-zksfbmzuvux9v7fgvcpygn.streamlit.app/",
+      airbnb: "https://airbnb-price-prediction-cuoahebcuticj3p3b5gkse.streamlit.app/",
+      retail: "https://retail-revenue-prediction-catboost-dyb8w8r5nsk8l5mdzsby8l.streamlit.app/"
+    },
+    email: "martinowoade16@gmail.com",
+    linkedin: "https://www.linkedin.com/in/owoade-martin-b00aa439b/"
+  };
+
+  (function wireLinks(){
+    const gh = "https://github.com/" + CONFIG.githubUser;
+    document.querySelectorAll('[data-link="profile"]').forEach(el => { el.href = gh; });
+    document.querySelectorAll('[data-link-text="profile"]').forEach(el => { el.textContent = gh.replace("https://", ""); });
+    const repoLinks = { taxi: 0, cannabis: 0, electricity: 0, airbnb: 0, hospital: 0, bank: 0, retail: 0 };
+    Object.keys(repoLinks).forEach(key => {
+      document.querySelectorAll('[data-link="repo:' + key + '"]').forEach(el => {
+        el.href = gh + "/" + CONFIG.repos[key];
+      });
+    });
+    Object.keys(CONFIG.apps).forEach(key => {
+      document.querySelectorAll('[data-link="app:' + key + '"]').forEach(el => {
+        el.href = CONFIG.apps[key];
+      });
+    });
+    document.querySelectorAll('[data-link="email"]').forEach(el => { el.href = "mailto:" + CONFIG.email; });
+    document.querySelectorAll('[data-link-text="email"]').forEach(el => { el.textContent = CONFIG.email; });
+    document.querySelectorAll('[data-link="linkedin"]').forEach(el => { el.href = CONFIG.linkedin; });
+  })();
+
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // mobile menu
+  const menuBtn = document.getElementById('menuBtn');
+  const navLinks = document.getElementById('navLinks');
+  menuBtn.addEventListener('click', () => {
+    const open = navLinks.classList.toggle('open');
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => navLinks.classList.remove('open'));
+  });
+
+  // gentle reveal on scroll
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>

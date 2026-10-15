@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nigerian Delivery Operations Analysis · Martin Owoade</title>
+<meta name="description" content="Full case study: 150,000 Nigerian last-mile delivery records in PostgreSQL, courier comparisons, route analysis, and city failure rates.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --lime: #84CC16;
+    --rose: #E96B6B;
+    --blue: #5B8DEF;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  @keyframes growY{ from{ transform: scaleY(0); } to{ transform: scaleY(1); } }
+  @keyframes growX{ from{ transform: scaleX(0); } to{ transform: scaleX(1); } }
+  @keyframes drawLine{ to{ stroke-dashoffset: 0; } }
+  @keyframes fadeIn{ from{ opacity: 0; } to{ opacity: 1; } }
+  .fig-v rect{ transform-box: fill-box; transform-origin: bottom; animation: growY .9s cubic-bezier(.2,.7,.2,1) both; }
+  .fig-h rect{ transform-box: fill-box; transform-origin: left; animation: growX .9s cubic-bezier(.2,.7,.2,1) both; }
+  .drawline{ stroke-dasharray: 1700; stroke-dashoffset: 1700; animation: drawLine 1.8s ease-out .2s forwards; }
+  .fig-fade svg{ animation: fadeIn 1.1s ease both; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .key-results{
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin: 36px 0 8px;
+  }
+  @media (max-width: 640px){ .key-results{ grid-template-columns: repeat(2, 1fr); } }
+  .kr{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+  }
+  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--lime); }
+  .kr .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 4px; }
+
+  article{ padding: 24px 0 40px; }
+  .chapter{ margin-bottom: 56px; }
+  .chapter .chnum{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 8px; }
+  .chapter h2{
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem); letter-spacing: -0.01em; margin-bottom: 18px;
+  }
+  .chapter h3{
+    font-family: var(--font-display); font-size: 17px; font-weight: 600;
+    margin: 26px 0 10px; color: var(--paper);
+  }
+  .chapter p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 68ch; }
+  .chapter p strong{ color: var(--paper); font-weight: 600; }
+  .chapter ul, .chapter ol{ color: var(--paper-dim); margin: 0 0 14px 20px; max-width: 66ch; }
+  .chapter li{ margin-bottom: 6px; }
+  .chapter li strong{ color: var(--paper); }
+  .chapter code{
+    font-family: var(--font-mono); font-size: 0.88em;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 7px; color: var(--teal);
+  }
+  table{
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 14px; background: var(--ink-card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  thead th{
+    font-family: var(--font-mono); font-size: 12px; font-weight: 400;
+    color: var(--signal); text-align: left; padding: 12px 16px;
+    border-bottom: 1px solid var(--line-strong); background: rgba(255,159,28,0.05);
+  }
+  tbody td{ padding: 11px 16px; border-bottom: 1px solid var(--line); color: var(--paper-dim); }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody td:first-child{ color: var(--paper); }
+  tbody td.num, thead th.num{ text-align: right; font-family: var(--font-mono); font-size: 13px; }
+  tbody tr.hl td{ color: var(--teal); }
+  .callout{
+    border-left: 3px solid var(--lime); background: var(--ink-card);
+    border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    border-radius: 0 14px 14px 0; padding: 18px 22px; margin: 20px 0;
+    color: var(--paper-dim); font-size: 15px;
+  }
+  .callout strong{ color: var(--paper); }
+  .callout .big{ font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--paper); display: block; margin-bottom: 4px; }
+  blockquote{
+    border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 20px 0;
+    font-family: var(--font-display); font-size: 19px; color: var(--paper); max-width: 60ch;
+  }
+  figure{ margin: 22px 0; }
+  figure svg{ width: 100%; height: auto; display: block; background: var(--ink-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  figcaption{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-top: 10px; text-align: center; }
+  .conclusion{
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    border-radius: 20px; padding: 36px; margin-bottom: 60px;
+  }
+  .conclusion h2{
+    font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .conclusion p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 66ch; }
+  .conclusion p strong{ color: var(--paper); }
+  .back-row{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 80px; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="sql.html" onclick="if(history.length>1){history.back();return false;}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/Nigerian-delivery-operations-analysis" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      View on GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">case study · postgresql · 150k deliveries</div>
+      <h1>Nigerian Delivery Operations Analysis</h1>
+      <p class="lede">Out of 150,000 parcels tracked across 15 Nigerian cities, 134,945 arrived safely and 15,055 did not. That headline hides the real story: seven couriers separated by less than one point, a 12-hour delivery ceiling no parcel ever crosses, routes whose averages differ by four minutes, and cities where the best courier changes every time. I rebuilt this picture from raw records in PostgreSQL to find where operations actually strain.</p>
+
+      <div class="key-results">
+        <div class="kr"><div class="n">150,000</div><div class="t">delivery records</div></div>
+        <div class="kr"><div class="n">89.96%</div><div class="t">delivered on record</div></div>
+        <div class="kr"><div class="n">0.65pp</div><div class="t">courier success gap</div></div>
+        <div class="kr"><div class="n">12h</div><div class="t">unexplained duration cap</div></div>
+      </div>
+    </div>
+
+    <div class="callout"><span class="big">Note</span>This dataset is <strong>synthetic</strong>. It names real logistics companies, but the numbers describe generated records, not their actual performance. Every finding below is a pattern in this data, and the value here is the analytical workflow: querying, validation, comparison, and honest limits.</div>
+
+    <article>
+      <!-- 01 Data -->
+      <section class="chapter" id="data">
+        <div class="chnum">01 · the data</div>
+        <h2>150,000 rows, 13 columns, zero gaps.</h2>
+        <p>The data comes from a public Hugging Face dataset of simulated Nigerian e-commerce deliveries, loaded into PostgreSQL as <code>public.delivery_data</code>. Each row carries delivery and order ids, courier and company, pickup and delivery timestamps, duration in minutes, distance, cities, status, rating, and fee. Validation passed clean: <strong>no duplicate delivery ids, no duplicate rows, zero missing values in any column</strong>, and spot-checked durations match their pickup-to-delivery timestamps.</p>
+      </section>
+
+      <!-- 02 Outcomes -->
+      <section class="chapter" id="outcomes">
+        <div class="chnum">02 · what happens to parcels</div>
+        <h2>Nearly 1 in 10 deliveries did not reach a successful outcome.</h2>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 260" role="img" aria-label="Bar chart of delivery outcomes: delivered 134945, failed 12028, returned 3027">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">deliveries by outcome (count)</text>
+            <line x1="110" y1="40" x2="110" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="110" y1="190" x2="520" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="140" y="40" width="80" height="150" rx="5" fill="#84CC16"/>
+            <rect x="300" y="177" width="80" height="13" rx="5" fill="#E96B6B"/>
+            <rect x="440" y="187" width="80" height="3" rx="2" fill="#E96B6B" opacity="0.6"/>
+            <text x="180" y="32" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">134,945</text>
+            <text x="340" y="169" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">12,028</text>
+            <text x="480" y="179" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">3,027</text>
+            <text x="180" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Delivered</text>
+            <text x="340" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Failed</text>
+            <text x="480" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Returned</text>
+          </svg>
+          <figcaption>Delivered dominates so completely the other bars barely register.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Status</th><th class="num">Deliveries</th><th class="num">Share</th></tr></thead>
+          <tbody>
+            <tr><td>Delivered</td><td class="num">134,945</td><td class="num">89.96%</td></tr>
+            <tr><td>Failed</td><td class="num">12,028</td><td class="num">8.02%</td></tr>
+            <tr><td>Returned</td><td class="num">3,027</td><td class="num">2.02%</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 03 Companies -->
+      <section class="chapter" id="companies">
+        <div class="chnum">03 · couriers compared</div>
+        <h2>Seven couriers, separated by 0.65 points.</h2>
+        <p>Ace Couriers leads on success at <strong>90.16%</strong> and Red Star Express trails at <strong>89.51%</strong>. Every other company lands between them. On failures the order mirrors itself: Kwik Delivery lowest at 7.90%, Red Star highest at 8.22%. Each company handled a similar workload of roughly 21,000 to 21,600 deliveries, so the comparison is fair on volume. The gaps are small enough that no company stands meaningfully apart in this data.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 300" role="img" aria-label="Horizontal bar chart of success rate by company, Ace Couriers highest at 90.16 percent">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">success rate by company (%) · axis 89.4 to 90.3</text>
+            <text x="0" y="48" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Ace Couriers</text>
+            <rect x="170" y="34" width="287" height="20" rx="5" fill="#84CC16"/>
+            <text x="461" y="50" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">90.16</text>
+            <text x="0" y="82" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Kwik Delivery</text>
+            <rect x="170" y="68" width="280" height="20" rx="5" fill="#84CC16" opacity="0.9"/>
+            <text x="454" y="84" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">90.14</text>
+            <text x="0" y="116" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Fedex Nigeria</text>
+            <rect x="170" y="102" width="268" height="20" rx="5" fill="#84CC16" opacity="0.8"/>
+            <text x="442" y="118" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">90.11</text>
+            <text x="0" y="150" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Dispatch Riders</text>
+            <rect x="170" y="136" width="208" height="20" rx="5" fill="#84CC16" opacity="0.65"/>
+            <text x="382" y="152" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">89.95</text>
+            <text x="0" y="184" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">DHL Nigeria</text>
+            <rect x="170" y="170" width="208" height="20" rx="5" fill="#84CC16" opacity="0.6"/>
+            <text x="382" y="186" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">89.95</text>
+            <text x="0" y="218" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">GIG Logistics</text>
+            <rect x="170" y="204" width="193" height="20" rx="5" fill="#84CC16" opacity="0.5"/>
+            <text x="367" y="220" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">89.91</text>
+            <text x="0" y="252" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Red Star Express</text>
+            <rect x="170" y="238" width="42" height="20" rx="5" fill="#E96B6B" opacity="0.85"/>
+            <text x="216" y="254" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">89.51</text>
+          </svg>
+          <figcaption>First to last spans less than one percentage point.</figcaption>
+        </figure>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 300" role="img" aria-label="Horizontal bar chart of failure rate by company, Red Star Express highest at 8.22 percent">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">failure rate by company (%) · axis 7.8 to 8.3</text>
+            <text x="0" y="48" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Kwik Delivery</text>
+            <rect x="170" y="34" width="68" height="20" rx="5" fill="#84CC16"/>
+            <text x="242" y="50" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.90</text>
+            <text x="0" y="82" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Ace Couriers</text>
+            <rect x="170" y="68" width="7" height="20" rx="3" fill="#84CC16" opacity="0.85"/>
+            <text x="181" y="84" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.91</text>
+            <text x="0" y="116" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Fedex Nigeria</text>
+            <rect x="170" y="102" width="27" height="20" rx="5" fill="#84CC16" opacity="0.75"/>
+            <text x="201" y="118" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.94</text>
+            <text x="0" y="150" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Dispatch Riders</text>
+            <rect x="170" y="136" width="61" height="20" rx="5" fill="#84CC16" opacity="0.65"/>
+            <text x="235" y="152" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.99</text>
+            <text x="0" y="184" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">DHL Nigeria</text>
+            <rect x="170" y="170" width="48" height="20" rx="5" fill="#E96B6B" opacity="0.6"/>
+            <text x="222" y="186" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.07</text>
+            <text x="0" y="218" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">GIG Logistics</text>
+            <rect x="170" y="204" width="136" height="20" rx="5" fill="#E96B6B" opacity="0.75"/>
+            <text x="310" y="220" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.10</text>
+            <text x="0" y="252" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Red Star Express</text>
+            <rect x="170" y="238" width="286" height="20" rx="5" fill="#E96B6B"/>
+            <text x="460" y="254" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.22</text>
+          </svg>
+          <figcaption>Mirror image of the success chart, as the math requires.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Company</th><th class="num">Deliveries</th><th class="num">Success %</th><th class="num">Failure %</th></tr></thead>
+          <tbody>
+            <tr><td>Ace Couriers</td><td class="num">21,296</td><td class="num">90.16</td><td class="num">7.91</td></tr>
+            <tr><td>Kwik Delivery</td><td class="num">21,612</td><td class="num">90.14</td><td class="num">7.90</td></tr>
+            <tr><td>Fedex Nigeria</td><td class="num">21,590</td><td class="num">90.11</td><td class="num">7.94</td></tr>
+            <tr><td>Dispatch Riders</td><td class="num">21,476</td><td class="num">89.95</td><td class="num">7.99</td></tr>
+            <tr><td>DHL Nigeria</td><td class="num">21,436</td><td class="num">89.95</td><td class="num">8.07</td></tr>
+            <tr><td>GIG Logistics</td><td class="num">21,218</td><td class="num">89.91</td><td class="num">8.10</td></tr>
+            <tr><td>Red Star Express</td><td class="num">21,372</td><td class="num">89.51</td><td class="num">8.22</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 04 Duration -->
+      <section class="chapter" id="duration">
+        <div class="chnum">04 · how long it takes</div>
+        <h2>Half the parcels take over six hours. None take over twelve.</h2>
+        <p>Durations run from 60 minutes to exactly 720, with half the parcels past six hours (74,755) and a third past eight (49,931). A hard ceiling at 12 hours with zero crossings looks less like operations and more like a generation rule, and it deserves a flag before anyone plans around it.</p>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 250" role="img" aria-label="Bar chart of deliveries exceeding duration thresholds: 74755 over six hours, 49931 over eight hours, zero over twelve hours">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">deliveries past each duration mark (count)</text>
+            <line x1="110" y1="40" x2="110" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="110" y1="190" x2="520" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="140" y="40" width="100" height="150" rx="5" fill="#84CC16"/>
+            <rect x="300" y="90" width="100" height="100" rx="5" fill="#84CC16" opacity="0.7"/>
+            <rect x="460" y="189" width="100" height="1" rx="1" fill="#84CC16" opacity="0.4"/>
+            <text x="190" y="32" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">74,755</text>
+            <text x="350" y="82" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">49,931</text>
+            <text x="510" y="181" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">0</text>
+            <text x="190" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Over 6h</text>
+            <text x="350" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Over 8h</text>
+            <text x="510" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Over 12h</text>
+          </svg>
+          <figcaption>The 12-hour wall with zero crossings points at the generator.</figcaption>
+        </figure>
+        <h3>Distance barely moves the needle</h3>
+        <p>Grouped into five distance bands of about 30,000 deliveries each, average duration runs 388.79, 389.28, 389.49, 391.33, and 389.85 minutes from shortest to longest trips. The full spread is 2.5 minutes on a six-and-a-half-hour average. Within this data, how far a parcel travels tells you almost nothing about how long it takes.</p>
+        <figure>
+          <svg viewBox="0 0 560 250" role="img" aria-label="Line chart of average delivery duration across distance bands, nearly flat between 389 and 391 minutes">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">avg duration by distance band (min) · axis 388 to 392</text>
+            <line x1="60" y1="64" x2="540" y2="64" stroke="rgba(237,234,217,0.12)"/>
+            <line x1="60" y1="120" x2="540" y2="120" stroke="rgba(237,234,217,0.12)"/>
+            <line x1="60" y1="165" x2="540" y2="165" stroke="rgba(237,234,217,0.12)"/>
+            <line x1="60" y1="210" x2="540" y2="210" stroke="rgba(237,234,217,0.25)"/>
+            <text x="14" y="67" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">391</text>
+            <text x="14" y="123" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">390</text>
+            <text x="14" y="168" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">389</text>
+            <text x="14" y="213" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">388</text>
+            <polyline class="drawline" points="60,173 160,152 260,140 360,64 460,127" fill="none" stroke="#84CC16" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle cx="60" cy="173" r="4" fill="#84CC16"/>
+            <circle cx="160" cy="152" r="4" fill="#84CC16"/>
+            <circle cx="260" cy="140" r="4" fill="#84CC16"/>
+            <circle cx="360" cy="64" r="4" fill="#84CC16"/>
+            <circle cx="460" cy="127" r="4" fill="#84CC16"/>
+            <text x="60" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">&lt;10 km</text>
+            <text x="160" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">10-20</text>
+            <text x="260" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">20-30</text>
+            <text x="360" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">30-40</text>
+            <text x="460" y="230" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">40+ km</text>
+          </svg>
+          <figcaption>Five times the distance, two and a half minutes of difference.</figcaption>
+        </figure>
+        <h3>Long routes cluster within four minutes</h3>
+        <p>Among city pairs with at least 100 deliveries, Abuja to Abeokuta averages longest at 405.94 minutes over 653 trips. The next fourteen run down to 401.97, a spread of 3.97 minutes. Same-city legs appear too, such as Ibadan to Ibadan at 404.32, and belong in their own group in any serious routing review.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 370" role="img" aria-label="Horizontal bar chart of top ten routes by average duration, Abuja to Abeokuta longest at 405.94 minutes">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">top 10 routes by avg duration (min) · axis 400 to 407</text>
+            <text x="0" y="44" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Abuja → Abeokuta</text>
+            <rect x="170" y="30" width="288" height="20" rx="5" fill="#84CC16"/>
+            <text x="462" y="46" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">405.9</text>
+            <text x="0" y="76" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Aba → Kaduna</text>
+            <rect x="170" y="62" width="267" height="20" rx="5" fill="#84CC16" opacity="0.9"/>
+            <text x="441" y="78" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">405.5</text>
+            <text x="0" y="108" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Aba → Abuja</text>
+            <rect x="170" y="94" width="260" height="20" rx="5" fill="#84CC16" opacity="0.85"/>
+            <text x="434" y="110" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">405.4</text>
+            <text x="0" y="140" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">PH → Warri</text>
+            <rect x="170" y="126" width="237" height="20" rx="5" fill="#84CC16" opacity="0.8"/>
+            <text x="411" y="142" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">404.9</text>
+            <text x="0" y="172" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Ibadan → Ibadan</text>
+            <rect x="170" y="158" width="210" height="20" rx="5" fill="#84CC16" opacity="0.75"/>
+            <text x="384" y="174" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">404.3</text>
+            <text x="0" y="204" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Enugu → Aba</text>
+            <rect x="170" y="190" width="191" height="20" rx="5" fill="#84CC16" opacity="0.65"/>
+            <text x="365" y="206" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">403.9</text>
+            <text x="0" y="236" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Kaduna → Ilorin</text>
+            <rect x="170" y="222" width="165" height="20" rx="5" fill="#84CC16" opacity="0.6"/>
+            <text x="339" y="238" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">403.4</text>
+            <text x="0" y="268" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Kano → Abeokuta</text>
+            <rect x="170" y="254" width="145" height="20" rx="5" fill="#84CC16" opacity="0.55"/>
+            <text x="319" y="270" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">403.0</text>
+            <text x="0" y="300" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Enugu → Abeokuta</text>
+            <rect x="170" y="286" width="141" height="20" rx="5" fill="#84CC16" opacity="0.5"/>
+            <text x="315" y="302" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">402.9</text>
+            <text x="0" y="332" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Benin → Enugu</text>
+            <rect x="170" y="318" width="137" height="20" rx="5" fill="#84CC16" opacity="0.45"/>
+            <text x="311" y="334" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">402.9</text>
+          </svg>
+          <figcaption>First to tenth differ by about three minutes.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 05 Ratings -->
+      <section class="chapter" id="ratings">
+        <div class="chnum">05 · ratings by outcome</div>
+        <h2>Ratings barely move with the outcome.</h2>
+        <p>Delivered averages 4.14, failed 4.13, returned 4.15: a total spread of 0.02 points. That flatness is itself a finding, but it comes with a warning. Unless ratings are collected the same way for every outcome, comparing a failed delivery score with a delivered one may compare two different things.</p>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 250" role="img" aria-label="Bar chart of average customer rating by delivery status: returned 4.15, delivered 4.14, failed 4.13">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">avg rating by status · axis 4.10 to 4.16</text>
+            <line x1="110" y1="40" x2="110" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="110" y1="190" x2="520" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="140" y="90" width="90" height="100" rx="5" fill="#84CC16" opacity="0.8"/>
+            <rect x="300" y="65" width="90" height="125" rx="5" fill="#84CC16"/>
+            <rect x="460" y="115" width="60" height="75" rx="5" fill="#84CC16" opacity="0.6"/>
+            <text x="185" y="82" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">4.14</text>
+            <text x="345" y="57" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">4.15</text>
+            <text x="490" y="107" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">4.13</text>
+            <text x="185" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Delivered</text>
+            <text x="345" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Returned</text>
+            <text x="490" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Failed</text>
+          </svg>
+          <figcaption>Three statuses, one rating. Read the collection method before the scores.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 06 Cities -->
+      <section class="chapter" id="cities">
+        <div class="chnum">06 · failure by city</div>
+        <h2>Onitsha fails most at 8.53%. Three cities tie lowest at 7.71%.</h2>
+        <p>The full spread runs less than one point, from Onitsha at 8.53% down through Aba at 8.49% and Calabar at 8.43% to a three-way tie at 7.71% between Kaduna, Ilorin, and Ibadan. These ranks flag locations for deeper checks, not verdicts on the cities themselves.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 500" role="img" aria-label="Horizontal bar chart of failure rate by pickup city, Onitsha highest at 8.53 percent">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">failure rate by pickup city (%) · axis 7.6 to 8.6</text>
+            <text x="0" y="44" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Onitsha</text>
+            <rect x="150" y="30" width="316" height="20" rx="5" fill="#E96B6B"/>
+            <text x="470" y="46" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.53</text>
+            <text x="0" y="74" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Aba</text>
+            <rect x="150" y="60" width="303" height="20" rx="5" fill="#E96B6B" opacity="0.9"/>
+            <text x="457" y="76" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.49</text>
+            <text x="0" y="104" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Calabar</text>
+            <rect x="150" y="90" width="282" height="20" rx="5" fill="#E96B6B" opacity="0.85"/>
+            <text x="436" y="106" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.43</text>
+            <text x="0" y="134" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Benin City</text>
+            <rect x="150" y="120" width="184" height="20" rx="5" fill="#E96B6B" opacity="0.7"/>
+            <text x="338" y="136" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.14</text>
+            <text x="0" y="164" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Jos</text>
+            <rect x="150" y="150" width="156" height="20" rx="5" fill="#E96B6B" opacity="0.65"/>
+            <text x="310" y="166" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.06</text>
+            <text x="0" y="194" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Kano</text>
+            <rect x="150" y="180" width="150" height="20" rx="5" fill="#E96B6B" opacity="0.6"/>
+            <text x="304" y="196" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.04</text>
+            <text x="0" y="224" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Enugu</text>
+            <rect x="150" y="210" width="143" height="20" rx="5" fill="#E96B6B" opacity="0.55"/>
+            <text x="297" y="226" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.02</text>
+            <text x="0" y="254" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Abeokuta</text>
+            <rect x="150" y="240" width="133" height="20" rx="5" fill="#E96B6B" opacity="0.5"/>
+            <text x="287" y="256" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.99</text>
+            <text x="0" y="284" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Warri</text>
+            <rect x="150" y="270" width="126" height="20" rx="5" fill="#84CC16" opacity="0.5"/>
+            <text x="280" y="286" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.97</text>
+            <text x="0" y="314" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Lagos</text>
+            <rect x="150" y="300" width="102" height="20" rx="5" fill="#84CC16" opacity="0.55"/>
+            <text x="256" y="316" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.90</text>
+            <text x="0" y="344" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Abuja</text>
+            <rect x="150" y="330" width="71" height="20" rx="5" fill="#84CC16" opacity="0.65"/>
+            <text x="225" y="346" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.81</text>
+            <text x="0" y="374" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Port Harcourt</text>
+            <rect x="150" y="360" width="58" height="20" rx="5" fill="#84CC16" opacity="0.7"/>
+            <text x="212" y="376" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.77</text>
+            <text x="0" y="404" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Kaduna</text>
+            <rect x="150" y="390" width="37" height="20" rx="5" fill="#84CC16" opacity="0.8"/>
+            <text x="191" y="406" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.71</text>
+            <text x="0" y="434" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Ilorin</text>
+            <rect x="150" y="420" width="37" height="20" rx="5" fill="#84CC16" opacity="0.85"/>
+            <text x="191" y="436" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.71</text>
+            <text x="0" y="464" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Ibadan</text>
+            <rect x="150" y="450" width="37" height="20" rx="5" fill="#84CC16" opacity="0.9"/>
+            <text x="191" y="466" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.71</text>
+          </svg>
+          <figcaption>Fifteen cities inside one percentage point.</figcaption>
+        </figure>
+        <h3>The best courier changes by city</h3>
+        <p>No company leads everywhere. Ace Couriers takes Lagos at 5.89% and Abuja at 6.80%, Kwik Delivery takes Ilorin at 6.50%, Dispatch Riders takes Enugu at 6.86%, and Red Star Express, weakest overall, takes Onitsha at 7.52% and Port Harcourt at 6.93%. Company averages hide these local differences, which is why the comparison has to happen city by city. The single worst cell in the data is DHL Nigeria in Onitsha at 9.60%.</p>
+        <table>
+          <thead><tr><th>Pickup city</th><th>Best company</th><th class="num">Failure %</th></tr></thead>
+          <tbody>
+            <tr><td>Aba</td><td>Fedex Nigeria</td><td class="num">7.28</td></tr>
+            <tr><td>Abeokuta</td><td>Red Star Express</td><td class="num">7.09</td></tr>
+            <tr><td>Abuja</td><td>Ace Couriers</td><td class="num">6.80</td></tr>
+            <tr><td>Benin City</td><td>Kwik Delivery</td><td class="num">7.26</td></tr>
+            <tr><td>Calabar</td><td>Fedex Nigeria</td><td class="num">7.39</td></tr>
+            <tr><td>Enugu</td><td>Dispatch Riders</td><td class="num">6.86</td></tr>
+            <tr><td>Ibadan</td><td>GIG Logistics</td><td class="num">7.32</td></tr>
+            <tr><td>Ilorin</td><td>Kwik Delivery</td><td class="num">6.50</td></tr>
+            <tr><td>Jos</td><td>DHL Nigeria</td><td class="num">7.11</td></tr>
+            <tr><td>Kaduna</td><td>Fedex Nigeria</td><td class="num">7.03</td></tr>
+            <tr><td>Kano</td><td>Red Star Express</td><td class="num">7.31</td></tr>
+            <tr><td>Lagos</td><td>Ace Couriers</td><td class="num">5.89</td></tr>
+            <tr><td>Onitsha</td><td>Red Star Express</td><td class="num">7.52</td></tr>
+            <tr><td>Port Harcourt</td><td>Red Star Express</td><td class="num">6.93</td></tr>
+            <tr><td>Warri</td><td>GIG Logistics</td><td class="num">7.31</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
+
+    <section class="conclusion">
+      <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">the bottom line</div>
+      <h2>Compare locally, distrust averages.</h2>
+      <p>This project ran PostgreSQL aggregations over 150,000 delivery records: an 89.96% success rate, company gaps under one point, durations capped at 12 hours, routes clustered within four minutes, ratings flat across outcomes, and city failure rates inside a single point. The company-by-city table shows why one overall number per courier misleads: the best performer changes with the pickup city.</p>
+      <p>None of this describes real courier performance. The data is synthetic, and the honest output is the method: validate first, compare at the right level, and state the limits beside every number. <strong>That discipline transfers directly to real operational data.</strong></p>
+      <blockquote>Small gaps deserve small claims. Check the level, check the coverage, then speak.</blockquote>
+    </section>
+
+    <div class="back-row">
+      <a class="btn btn-primary" href="sql.html" onclick="if(history.length>1){history.back();return false;}">Back</a>
+      <a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/Nigerian-delivery-operations-analysis" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

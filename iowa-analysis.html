@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iowa Liquor Sales Analysis · Martin Owoade</title>
+<meta name="description" content="Full case study: 2.92 million Iowa liquor sales records in PostgreSQL, monthly trends, category leaders, and a duplicate-record investigation that moved revenue by $76.75M.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --sqlblue: #4E8DC5;
+    --rose: #E96B6B;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  @keyframes growY{ from{ transform: scaleY(0); } to{ transform: scaleY(1); } }
+  @keyframes growX{ from{ transform: scaleX(0); } to{ transform: scaleX(1); } }
+  @keyframes fadeIn{ from{ opacity: 0; } to{ opacity: 1; } }
+  .fig-v rect{ transform-box: fill-box; transform-origin: bottom; animation: growY .9s cubic-bezier(.2,.7,.2,1) both; }
+  .fig-h rect{ transform-box: fill-box; transform-origin: left; animation: growX .9s cubic-bezier(.2,.7,.2,1) both; }
+  .fig-fade svg{ animation: fadeIn 1.1s ease both; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .key-results{
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin: 36px 0 8px;
+  }
+  @media (max-width: 640px){ .key-results{ grid-template-columns: repeat(2, 1fr); } }
+  .kr{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+  }
+  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--sqlblue); }
+  .kr .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 4px; }
+
+  article{ padding: 24px 0 40px; }
+  .chapter{ margin-bottom: 56px; }
+  .chapter .chnum{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 8px; }
+  .chapter h2{
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem); letter-spacing: -0.01em; margin-bottom: 18px;
+  }
+  .chapter h3{
+    font-family: var(--font-display); font-size: 17px; font-weight: 600;
+    margin: 26px 0 10px; color: var(--paper);
+  }
+  .chapter p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 68ch; }
+  .chapter p strong{ color: var(--paper); font-weight: 600; }
+  .chapter ul, .chapter ol{ color: var(--paper-dim); margin: 0 0 14px 20px; max-width: 66ch; }
+  .chapter li{ margin-bottom: 6px; }
+  .chapter li strong{ color: var(--paper); }
+  .chapter code{
+    font-family: var(--font-mono); font-size: 0.88em;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 7px; color: var(--teal);
+  }
+  .chapter pre{
+    font-family: var(--font-mono); font-size: 13px; line-height: 1.65;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px 22px; margin: 18px 0;
+    overflow-x: auto; color: var(--paper);
+  }
+  table{
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 14px; background: var(--ink-card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  thead th{
+    font-family: var(--font-mono); font-size: 12px; font-weight: 400;
+    color: var(--signal); text-align: left; padding: 12px 16px;
+    border-bottom: 1px solid var(--line-strong); background: rgba(255,159,28,0.05);
+  }
+  tbody td{ padding: 11px 16px; border-bottom: 1px solid var(--line); color: var(--paper-dim); }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody td:first-child{ color: var(--paper); }
+  tbody td.num, thead th.num{ text-align: right; font-family: var(--font-mono); font-size: 13px; }
+  tbody tr.hl td{ color: var(--teal); }
+  .callout{
+    border-left: 3px solid var(--sqlblue); background: var(--ink-card);
+    border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    border-radius: 0 14px 14px 0; padding: 18px 22px; margin: 20px 0;
+    color: var(--paper-dim); font-size: 15px;
+  }
+  .callout strong{ color: var(--paper); }
+  .callout .big{ font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--paper); display: block; margin-bottom: 4px; }
+  blockquote{
+    border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 20px 0;
+    font-family: var(--font-display); font-size: 19px; color: var(--paper); max-width: 60ch;
+  }
+  figure{ margin: 22px 0; }
+  figure svg{ width: 100%; height: auto; display: block; background: var(--ink-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  figcaption{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-top: 10px; text-align: center; }
+  .conclusion{
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    border-radius: 20px; padding: 36px; margin-bottom: 60px;
+  }
+  .conclusion h2{
+    font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .conclusion p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 66ch; }
+  .conclusion p strong{ color: var(--paper); }
+  .back-row{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 80px; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="sql.html" onclick="if(history.length>1){history.back();return false;}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/iowa_food_establishments" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      View on GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">case study · postgresql · 2.92m records</div>
+      <h1>Iowa Liquor Sales Analysis</h1>
+      <p class="lede">What sells, where, and when across 2.92 million Iowa liquor records from 2025? I answered that question entirely in PostgreSQL, and the most important finding was not a bestseller. It was 429,996 repeated rows quietly inflating revenue by $76.75 million.</p>
+
+      <div class="key-results">
+        <div class="kr"><div class="n">2,920,615</div><div class="t">records queried</div></div>
+        <div class="kr"><div class="n">$501.56M</div><div class="t">recorded revenue</div></div>
+        <div class="kr"><div class="n">429,996</div><div class="t">repeated rows found</div></div>
+        <div class="kr"><div class="n">$76.75M</div><div class="t">revenue gap on dedup</div></div>
+      </div>
+    </div>
+
+    <article>
+      <!-- 01 Data -->
+      <section class="chapter" id="data">
+        <div class="chnum">01 · the data</div>
+        <h2>2,920,615 rows, 16 columns, one year of liquor sales.</h2>
+        <p>The data comes from the Iowa government data portal and was loaded into PostgreSQL as <code>public.iowa_food_establishments</code>. It covers <strong>January to December 2025</strong> with order dates, store details, county information, product descriptions, vendors, bottle costs and retail prices, quantities, and recorded sales values. The main measures are <code>sales_dollars</code>, <code>sales_bottles</code>, <code>sales_liters</code>, and <code>sales_gallons</code>.</p>
+        <table>
+          <thead><tr><th>Dataset characteristic</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Reporting period</td><td>January to December 2025</td></tr>
+            <tr><td>Original records</td><td>2,920,615</td></tr>
+            <tr><td>Stores represented</td><td>2,243</td></tr>
+            <tr><td>Products represented</td><td>5,048</td></tr>
+            <tr><td>Product categories</td><td>48</td></tr>
+            <tr><td>Database</td><td>PostgreSQL</td></tr>
+            <tr><td>Analysis tool</td><td>SQL</td></tr>
+          </tbody>
+        </table>
+        <h3>How it was queried</h3>
+        <p>All analysis ran as SQL against the database. <strong>Aggregate functions</strong> (<code>SUM()</code>, <code>COUNT()</code>, <code>AVG()</code>, <code>MIN()</code>, <code>MAX()</code>) produced the headline metrics. <strong>GROUP BY</strong> compared revenue across months, categories, products, counties, and stores. <strong>Date functions</strong> (<code>DATE_TRUNC()</code>, <code>EXTRACT()</code>, <code>TO_CHAR()</code>) built the monthly and day-of-week views. The <strong>LAG()</strong> window function compared each category against its previous month. And <strong>SELECT DISTINCT</strong> powered the duplicate investigation. The original table was never altered.</p>
+      </section>
+
+      <!-- 02 Baseline + monthly -->
+      <section class="chapter" id="monthly">
+        <div class="chnum">02 · the year in months</div>
+        <h2>Eleven steady months, then September doubles everything.</h2>
+        <p>Recorded revenue rose gradually from $31.11M in January to $37.65M in August. Then September posted $70.32M and October $78.19M, roughly double the surrounding months, before November fell back to $34.68M. Plotted against deduplicated totals, the story sharpens: January through July match exactly, while September and October collapse back toward $35M and $40M. Those two spikes were repeated records, not a sales boom.</p>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 300" role="img" aria-label="Grouped bar chart of monthly revenue, recorded versus deduplicated, showing September and October spikes only in recorded figures">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">monthly revenue ($M) · violet = recorded, teal = deduplicated</text>
+            <line x1="40" y1="30" x2="40" y2="200" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="40" y1="200" x2="540" y2="200" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="40" y="136" width="16" height="64" rx="3" fill="#4E8DC5"/>
+            <rect x="58" y="136" width="16" height="64" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="80" y="136" width="16" height="64" rx="3" fill="#4E8DC5"/>
+            <rect x="98" y="136" width="16" height="64" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="120" y="131" width="16" height="69" rx="3" fill="#4E8DC5"/>
+            <rect x="138" y="131" width="16" height="69" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="160" y="127" width="16" height="73" rx="3" fill="#4E8DC5"/>
+            <rect x="178" y="127" width="16" height="73" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="200" y="127" width="16" height="73" rx="3" fill="#4E8DC5"/>
+            <rect x="218" y="127" width="16" height="73" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="240" y="126" width="16" height="74" rx="3" fill="#4E8DC5"/>
+            <rect x="258" y="126" width="16" height="74" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="280" y="126" width="16" height="74" rx="3" fill="#4E8DC5"/>
+            <rect x="298" y="126" width="16" height="74" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="320" y="123" width="16" height="77" rx="3" fill="#4E8DC5"/>
+            <rect x="338" y="130" width="16" height="70" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="360" y="55" width="16" height="145" rx="3" fill="#4E8DC5"/>
+            <rect x="378" y="128" width="16" height="72" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="400" y="40" width="16" height="160" rx="3" fill="#4E8DC5"/>
+            <rect x="418" y="118" width="16" height="82" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="440" y="129" width="16" height="71" rx="3" fill="#4E8DC5"/>
+            <rect x="458" y="129" width="16" height="71" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <rect x="480" y="115" width="16" height="85" rx="3" fill="#4E8DC5"/>
+            <rect x="498" y="115" width="16" height="85" rx="3" fill="#3DDC97" opacity="0.85"/>
+            <text x="48" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 48 218)">Jan</text>
+            <text x="88" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 88 218)">Feb</text>
+            <text x="128" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 128 218)">Mar</text>
+            <text x="168" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 168 218)">Apr</text>
+            <text x="208" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 208 218)">May</text>
+            <text x="248" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 248 218)">Jun</text>
+            <text x="288" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 288 218)">Jul</text>
+            <text x="328" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 328 218)">Aug</text>
+            <text x="368" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 368 218)">Sep</text>
+            <text x="408" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 408 218)">Oct</text>
+            <text x="448" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 448 218)">Nov</text>
+            <text x="488" y="218" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle" transform="rotate(-35 488 218)">Dec</text>
+          </svg>
+          <figcaption>September and October tower in recorded figures, then shrink on deduplication.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Month</th><th class="num">Recorded ($)</th><th class="num">Deduplicated ($)</th><th class="num">Difference ($)</th></tr></thead>
+          <tbody>
+            <tr><td>January</td><td class="num">31,111,677.66</td><td class="num">31,111,677.66</td><td class="num">0.00</td></tr>
+            <tr><td>February</td><td class="num">31,308,695.75</td><td class="num">31,308,695.75</td><td class="num">0.00</td></tr>
+            <tr><td>March</td><td class="num">33,518,798.61</td><td class="num">33,518,798.61</td><td class="num">0.00</td></tr>
+            <tr><td>April</td><td class="num">35,499,986.35</td><td class="num">35,499,986.35</td><td class="num">0.00</td></tr>
+            <tr><td>May</td><td class="num">35,589,683.49</td><td class="num">35,589,683.49</td><td class="num">0.00</td></tr>
+            <tr><td>June</td><td class="num">35,946,281.01</td><td class="num">35,946,281.01</td><td class="num">0.00</td></tr>
+            <tr><td>July</td><td class="num">36,094,242.39</td><td class="num">36,094,242.39</td><td class="num">0.00</td></tr>
+            <tr><td>August</td><td class="num">37,646,505.35</td><td class="num">34,213,226.46</td><td class="num">3,433,278.89</td></tr>
+            <tr><td>September</td><td class="num">70,315,545.46</td><td class="num">35,151,175.73</td><td class="num">35,164,369.73</td></tr>
+            <tr><td>October</td><td class="num">78,186,743.07</td><td class="num">40,038,767.56</td><td class="num">38,147,975.51</td></tr>
+            <tr><td>November</td><td class="num">34,684,681.00</td><td class="num">34,684,681.00</td><td class="num">0.00</td></tr>
+            <tr><td>December</td><td class="num">41,662,102.00</td><td class="num">41,657,070.00</td><td class="num">5,032.00</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 03 Categories + products -->
+      <section class="chapter" id="products">
+        <div class="chnum">03 · what sells</div>
+        <h2>Three Titos sizes take three of the top four spots.</h2>
+        <p>American vodkas lead categories at <strong>$76.23M</strong>, followed by Canadian whiskies at $54.25M and straight bourbon at $47.29M. Whiskey in its forms holds four of the top seven spots. At product level, three sizes of Titos Handmade Vodka take three of the top four positions, totaling about $32M between them, with Black Velvet and Captain Morgan close behind.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 370" role="img" aria-label="Horizontal bar chart of top ten categories by revenue, American vodkas highest at 76.23 million dollars">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">top 10 categories by revenue ($M)</text>
+            <text x="0" y="44" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">American Vodkas</text>
+            <rect x="170" y="30" width="340" height="20" rx="5" fill="#4E8DC5"/>
+            <text x="514" y="46" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">76.2</text>
+            <text x="0" y="76" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Canadian Whiskies</text>
+            <rect x="170" y="62" width="242" height="20" rx="5" fill="#4E8DC5" opacity="0.9"/>
+            <text x="416" y="78" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">54.3</text>
+            <text x="0" y="108" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Bourbon</text>
+            <rect x="170" y="94" width="211" height="20" rx="5" fill="#4E8DC5" opacity="0.85"/>
+            <text x="385" y="110" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">47.3</text>
+            <text x="0" y="140" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Agave Tequila</text>
+            <rect x="170" y="126" width="174" height="20" rx="5" fill="#4E8DC5" opacity="0.8"/>
+            <text x="348" y="142" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">39.1</text>
+            <text x="0" y="172" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Whiskey Liqueur</text>
+            <rect x="170" y="158" width="144" height="20" rx="5" fill="#4E8DC5" opacity="0.75"/>
+            <text x="318" y="174" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">32.3</text>
+            <text x="0" y="204" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Spiced Rum</text>
+            <rect x="170" y="190" width="105" height="20" rx="5" fill="#4E8DC5" opacity="0.65"/>
+            <text x="279" y="206" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">23.6</text>
+            <text x="0" y="236" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Tennessee</text>
+            <rect x="170" y="222" width="84" height="20" rx="5" fill="#4E8DC5" opacity="0.6"/>
+            <text x="258" y="238" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">18.7</text>
+            <text x="0" y="268" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Specialty Packs</text>
+            <rect x="170" y="254" width="81" height="20" rx="5" fill="#4E8DC5" opacity="0.55"/>
+            <text x="255" y="270" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">18.2</text>
+            <text x="0" y="300" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Imported Vodkas</text>
+            <rect x="170" y="286" width="64" height="20" rx="5" fill="#4E8DC5" opacity="0.5"/>
+            <text x="238" y="302" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">14.3</text>
+            <text x="0" y="332" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Flavored Vodka</text>
+            <rect x="170" y="318" width="56" height="20" rx="5" fill="#4E8DC5" opacity="0.45"/>
+            <text x="230" y="334" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">12.5</text>
+          </svg>
+          <figcaption>American vodkas earn nearly as much as the next two categories combined.</figcaption>
+        </figure>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 370" role="img" aria-label="Horizontal bar chart of top ten products by revenue, Titos Handmade Vodka highest at 13.19 million dollars">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">top 10 products by revenue ($M)</text>
+            <text x="0" y="44" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">TITOS 38178</text>
+            <rect x="170" y="30" width="340" height="20" rx="5" fill="#3DDC97"/>
+            <text x="514" y="46" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">13.2</text>
+            <text x="0" y="76" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">TITOS 38177</text>
+            <rect x="170" y="62" width="297" height="20" rx="5" fill="#3DDC97" opacity="0.9"/>
+            <text x="471" y="78" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">11.5</text>
+            <text x="0" y="108" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">BLACK VELVET</text>
+            <rect x="170" y="94" width="228" height="20" rx="5" fill="#3DDC97" opacity="0.85"/>
+            <text x="402" y="110" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.8</text>
+            <text x="0" y="140" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">TITOS 38176</text>
+            <rect x="170" y="126" width="188" height="20" rx="5" fill="#3DDC97" opacity="0.8"/>
+            <text x="362" y="142" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">7.3</text>
+            <text x="0" y="172" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">CAPT MORG BARREL</text>
+            <rect x="170" y="158" width="179" height="20" rx="5" fill="#3DDC97" opacity="0.75"/>
+            <text x="353" y="174" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">6.9</text>
+            <text x="0" y="204" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">FIREBALL MINI</text>
+            <rect x="170" y="190" width="178" height="20" rx="5" fill="#3DDC97" opacity="0.7"/>
+            <text x="352" y="206" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">6.9</text>
+            <text x="0" y="236" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">CAPT MORG ORIG</text>
+            <rect x="170" y="222" width="127" height="20" rx="5" fill="#3DDC97" opacity="0.6"/>
+            <text x="301" y="238" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">4.9</text>
+            <text x="0" y="268" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">CROWN APPLE</text>
+            <rect x="170" y="254" width="113" height="20" rx="5" fill="#3DDC97" opacity="0.55"/>
+            <text x="287" y="270" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">4.4</text>
+            <text x="0" y="300" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">FIREBALL</text>
+            <rect x="170" y="286" width="110" height="20" rx="5" fill="#3DDC97" opacity="0.5"/>
+            <text x="284" y="302" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">4.3</text>
+            <text x="0" y="332" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">CROWN BLACKBERRY</text>
+            <rect x="170" y="318" width="109" height="20" rx="5" fill="#3DDC97" opacity="0.45"/>
+            <text x="280" y="334" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">4.2</text>
+          </svg>
+          <figcaption>Three Titos sizes take three of the top four product spots.</figcaption>
+        </figure>
+        <h3>Revenue per bottle tells a different story</h3>
+        <p>Ranking by revenue per bottle surfaces the luxury end: rare whiskies and cognacs at thousands of dollars a bottle, sold in tiny quantities. A Weller Millennium at $5,625 a bottle across 22 bottles and a single-bottle Macallan M at $5,449 show the opposite business from Titos. Revenue per bottle describes the mix, not a shelf price, since pack sizes and bottle volumes vary.</p>
+        <table>
+          <thead><tr><th>Product</th><th class="num">Revenue / Bottle ($)</th><th class="num">Bottles</th></tr></thead>
+          <tbody>
+            <tr><td>Weller Millennium</td><td class="num">5,625.00</td><td class="num">22</td></tr>
+            <tr><td>Macallan M</td><td class="num">5,449.00</td><td class="num">1</td></tr>
+            <tr><td>Glenlivet 40Yr</td><td class="num">4,500.00</td><td class="num">3</td></tr>
+            <tr><td>Macallan Sherry Oak 30Yo</td><td class="num">4,133.00</td><td class="num">1</td></tr>
+            <tr><td>Balvenie 30Yr</td><td class="num">4,095.00</td><td class="num">6</td></tr>
+            <tr><td>Whistlepig 30Yr Single Malt</td><td class="num">3,750.00</td><td class="num">3</td></tr>
+            <tr><td>Midleton Foret de Troncais</td><td class="num">3,748.35</td><td class="num">2</td></tr>
+            <tr><td>Remy Martin Louis XIII</td><td class="num">3,289.19</td><td class="num">15</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 04 Geography -->
+      <section class="chapter" id="geography">
+        <div class="chnum">04 · where it sells</div>
+        <h2>Polk County alone moves 23% of revenue.</h2>
+        <p>Polk County recorded <strong>$115.89M across 310 stores</strong>, more than the next two counties combined. Linn follows at $42.81M. Revenue per store adds context, since a county with more stores naturally totals more. Store-level leaders include Hy-Vee #3 in Des Moines at $16.22M and Central City 2 at $15.60M. High recorded revenue alone does not prove efficiency, since costs, store size, and foot traffic sit outside this data.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 370" role="img" aria-label="Horizontal bar chart of top ten counties by revenue, Polk highest at 115.89 million dollars">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">top 10 counties by revenue ($M)</text>
+            <text x="0" y="44" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">POLK</text>
+            <rect x="130" y="30" width="340" height="20" rx="5" fill="#4E8DC5"/>
+            <text x="474" y="46" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">115.9</text>
+            <text x="0" y="76" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">LINN</text>
+            <rect x="130" y="62" width="126" height="20" rx="5" fill="#4E8DC5" opacity="0.85"/>
+            <text x="260" y="78" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">42.8</text>
+            <text x="0" y="108" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">SCOTT</text>
+            <rect x="130" y="94" width="94" height="20" rx="5" fill="#4E8DC5" opacity="0.8"/>
+            <text x="228" y="110" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">31.9</text>
+            <text x="0" y="140" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">JOHNSON</text>
+            <rect x="130" y="126" width="84" height="20" rx="5" fill="#4E8DC5" opacity="0.75"/>
+            <text x="218" y="142" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">28.5</text>
+            <text x="0" y="172" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">BLACK HAWK</text>
+            <rect x="130" y="158" width="69" height="20" rx="5" fill="#4E8DC5" opacity="0.7"/>
+            <text x="203" y="174" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">23.7</text>
+            <text x="0" y="204" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">POTTAWATTAMIE</text>
+            <rect x="130" y="190" width="55" height="20" rx="5" fill="#4E8DC5" opacity="0.65"/>
+            <text x="189" y="206" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">18.8</text>
+            <text x="0" y="236" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">WOODBURY</text>
+            <rect x="130" y="222" width="50" height="20" rx="5" fill="#4E8DC5" opacity="0.6"/>
+            <text x="184" y="238" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">17.1</text>
+            <text x="0" y="268" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">DALLAS</text>
+            <rect x="130" y="254" width="50" height="20" rx="5" fill="#4E8DC5" opacity="0.55"/>
+            <text x="184" y="270" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">16.9</text>
+            <text x="0" y="300" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">DUBUQUE</text>
+            <rect x="130" y="286" width="42" height="20" rx="5" fill="#4E8DC5" opacity="0.5"/>
+            <text x="176" y="302" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">14.4</text>
+            <text x="0" y="332" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">STORY</text>
+            <rect x="130" y="318" width="42" height="20" rx="5" fill="#4E8DC5" opacity="0.45"/>
+            <text x="176" y="334" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">14.2</text>
+          </svg>
+          <figcaption>One county outranks the next two combined.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 05 Weekday -->
+      <section class="chapter" id="weekday">
+        <div class="chnum">05 · when orders land</div>
+        <h2>Distributors order on weekdays. Weekends go quiet.</h2>
+        <p>Tuesday and Wednesday each recorded over $106M, with Monday close at $98.39M. Thursday and Friday sit lower at $88.83M and $94.40M. Then activity collapses: Sunday recorded $6.86M across 49,640 records, and Saturday just $154K across 1,285 records, against more than 600,000 records on a busy Tuesday. The <code>ordered_on</code> field marks the order date, not the consumer purchase date, so this reads as distributor and retailer scheduling, not drinking habits.</p>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 270" role="img" aria-label="Bar chart of recorded revenue by weekday, Tuesday and Wednesday highest near 106 million dollars, Saturday near zero">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">recorded revenue by weekday ($M)</text>
+            <line x1="63" y1="30" x2="63" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="63" y1="190" x2="497" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="63" y="52" width="50" height="138" rx="5" fill="#4E8DC5" opacity="0.9"/>
+            <rect x="127" y="40" width="50" height="150" rx="5" fill="#4E8DC5"/>
+            <rect x="191" y="40" width="50" height="150" rx="5" fill="#4E8DC5"/>
+            <rect x="255" y="65" width="50" height="125" rx="5" fill="#4E8DC5" opacity="0.85"/>
+            <rect x="319" y="57" width="50" height="133" rx="5" fill="#4E8DC5" opacity="0.9"/>
+            <rect x="383" y="189" width="50" height="1" rx="1" fill="#4E8DC5" opacity="0.4"/>
+            <rect x="447" y="180" width="50" height="10" rx="3" fill="#4E8DC5" opacity="0.5"/>
+            <text x="88" y="44" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">98.4</text>
+            <text x="152" y="32" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">106.4</text>
+            <text x="216" y="32" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">106.6</text>
+            <text x="280" y="57" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">88.8</text>
+            <text x="344" y="49" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">94.4</text>
+            <text x="408" y="178" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">0.2</text>
+            <text x="472" y="172" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">6.9</text>
+            <text x="88" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Mon</text>
+            <text x="152" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Tue</text>
+            <text x="216" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Wed</text>
+            <text x="280" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Thu</text>
+            <text x="344" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Fri</text>
+            <text x="408" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Sat</text>
+            <text x="472" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Sun</text>
+          </svg>
+          <figcaption>Ordering stops on Saturday: 1,285 records against 639,714 on Tuesday.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 06 Duplicates -->
+      <section class="chapter" id="duplicates">
+        <div class="chnum">06 · the repeated records</div>
+        <h2>429,996 repeated rows holding $76,750,656.13.</h2>
+        <p>The original table holds 2,920,615 rows. Selecting distinct full rows returns 2,490,619, a difference of <strong>429,996 repeated rows</strong>. Revenue drops from $501,564,942.14 to <strong>$424,814,286.01</strong>, a gap of <strong>$76,750,656.13</strong>. Bottle volume drops from 35,894,220 to 30,440,723, a gap of 5,453,497. One inspected combination of date, store, item, vendor, quantity, and value appeared 28 times with identical values.</p>
+        <figure class="fig-v">
+          <svg viewBox="0 0 560 250" role="img" aria-label="Bar chart comparing recorded totals with deduplicated totals: revenue 501.56 versus 424.81 million dollars">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">recorded vs deduplicated totals</text>
+            <line x1="120" y1="30" x2="120" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="120" y1="190" x2="520" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="170" y="40" width="110" height="150" rx="5" fill="#4E8DC5"/>
+            <rect x="330" y="63" width="110" height="127" rx="5" fill="#3DDC97"/>
+            <text x="225" y="32" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">$501.56M</text>
+            <text x="385" y="55" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">$424.81M</text>
+            <text x="225" y="208" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Recorded revenue</text>
+            <text x="385" y="208" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">Deduplicated</text>
+          </svg>
+          <figcaption>A $76.75M gap, 15.3% of the recorded total.</figcaption>
+        </figure>
+        <div class="callout"><span class="big">A finding, not a verdict</span>Repeated rows are not automatically errors. Legitimate transactions can share identical values across every column when the table has no unique transaction identifier. The comparison shows the <strong>size of the uncertainty</strong>, and the monthly table above shows where it concentrates, before anyone uses these months to claim business growth.</div>
+      </section>
+
+      <!-- 07 Missing -->
+      <section class="chapter" id="missing">
+        <div class="chnum">07 · what is missing</div>
+        <h2>1,213,531 rows with no cost. No margin math possible.</h2>
+        <p>State bottle cost and retail price are each missing in <strong>1,213,531 rows, about 41.6%</strong>. Without them, no complete profit-margin calculation is possible. County and city names are each missing in 1,931 rows, a small share that can still shift local summaries. A handful of other columns miss 2 values each. Missing values were left as missing: filling them with zero would invent a price of $0.00, which is a claim, not a fix.</p>
+        <figure class="fig-h">
+          <svg viewBox="0 0 560 220" role="img" aria-label="Horizontal bar chart of missing values: bottle cost and retail price 1.21 million each, county and city 1931 each">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">missing values by column (count)</text>
+            <text x="0" y="60" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Bottle cost</text>
+            <rect x="170" y="46" width="340" height="20" rx="5" fill="#E96B6B"/>
+            <text x="514" y="62" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">1.21M</text>
+            <text x="0" y="110" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Retail price</text>
+            <rect x="170" y="96" width="340" height="20" rx="5" fill="#E96B6B" opacity="0.85"/>
+            <text x="514" y="112" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">1.21M</text>
+            <text x="0" y="160" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">County name</text>
+            <rect x="170" y="146" width="3" height="20" rx="2" fill="#E96B6B" opacity="0.6"/>
+            <text x="177" y="162" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">1,931</text>
+            <text x="0" y="210" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Store city</text>
+            <rect x="170" y="196" width="3" height="20" rx="2" fill="#E96B6B" opacity="0.5"/>
+            <text x="177" y="212" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">1,931</text>
+          </svg>
+          <figcaption>Cost fields gap most; geography gaps are small but real.</figcaption>
+        </figure>
+      </section>
+    </article>
+
+    <section class="conclusion">
+      <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">the bottom line</div>
+      <h2>Quote the total only after checking it.</h2>
+      <p>PostgreSQL turned 2,920,615 Iowa liquor records into a full business picture: <strong>$501.56M recorded revenue</strong>, American vodkas on top, Polk County far ahead, ordering concentrated on weekdays, and luxury bottles fetching thousands per unit. Then validation changed the picture: <strong>429,996 repeated rows inflate the total by $76.75M</strong>, concentrated in August through October, which means the September and October spikes cannot be read as growth without source checks.</p>
+      <p>Together with 41.6% missing cost values, one year of coverage, and no customer or inventory data, the limits are clear. The next stage moves to Python for visualization and demand analysis. The lesson stands: <strong>useful analysis requires examining the data before interpreting the numbers as business performance</strong>.</p>
+      <blockquote>Totals describe the table. Validation decides whether to trust them.</blockquote>
+    </section>
+
+    <div class="back-row">
+      <a class="btn btn-primary" href="sql.html" onclick="if(history.length>1){history.back();return false;}">Back</a>
+      <a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/iowa_food_establishments" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

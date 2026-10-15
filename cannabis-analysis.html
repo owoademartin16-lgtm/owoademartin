@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cannabis Gross Sales Prediction · Martin Owoade</title>
+<meta name="description" content="Plain-language write-up: forecasting four years of daily cannabis gross sales, and why a simple model beat the complex ones.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --rose: #E96B6B;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .key-results{
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin: 36px 0 8px;
+  }
+  @media (max-width: 640px){ .key-results{ grid-template-columns: repeat(2, 1fr); } }
+  .kr{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+  }
+  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--teal); }
+  .kr .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 4px; }
+
+  article{ padding: 24px 0 40px; }
+  .chapter{ margin-bottom: 56px; }
+  .chapter .chnum{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 8px; }
+  .chapter h2{
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem); letter-spacing: -0.01em; margin-bottom: 18px;
+  }
+  .chapter p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 68ch; }
+  .chapter p strong{ color: var(--paper); font-weight: 600; }
+  .chapter ul, .chapter ol{ color: var(--paper-dim); margin: 0 0 14px 20px; max-width: 66ch; }
+  .chapter li{ margin-bottom: 6px; }
+  .chapter li strong{ color: var(--paper); }
+  table{
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 14px; background: var(--ink-card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  thead th{
+    font-family: var(--font-mono); font-size: 12px; font-weight: 400;
+    color: var(--signal); text-align: left; padding: 12px 16px;
+    border-bottom: 1px solid var(--line-strong); background: rgba(255,159,28,0.05);
+  }
+  tbody td{ padding: 11px 16px; border-bottom: 1px solid var(--line); color: var(--paper-dim); }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody td:first-child{ color: var(--paper); }
+  tbody td.num, thead th.num{ text-align: right; font-family: var(--font-mono); font-size: 13px; }
+  tbody tr.best td{ color: var(--teal); }
+  tbody tr.poor td{ color: var(--rose); }
+  figure{ margin: 22px 0; }
+  figure svg{ width: 100%; height: auto; display: block; background: var(--ink-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  figcaption{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-top: 10px; text-align: center; }
+  .conclusion{
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    border-radius: 20px; padding: 36px; margin-bottom: 60px;
+  }
+  .conclusion h2{
+    font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .conclusion p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 66ch; }
+  .conclusion p strong{ color: var(--paper); }
+  blockquote{
+    border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 20px 0;
+    font-family: var(--font-display); font-size: 19px; color: var(--paper); max-width: 60ch;
+  }
+  .back-row{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 80px; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
+  footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to portfolio
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/Cannabis-Sales-Forecast" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      View on GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">case study · sales forecasting · 4 years of daily data</div>
+      <h1>Cannabis Gross Sales Prediction</h1>
+      <p class="lede">I had four years of daily cannabis sales in front of me and one question I actually cared about: if I know everything sold up to today, can I call tomorrow's number? What followed was the full journey from raw records to a working forecast, with one result I did not see coming.</p>
+
+      <div class="key-results">
+        <div class="kr"><div class="n">1,461</div><div class="t">days of sales</div></div>
+        <div class="kr"><div class="n">$292M</div><div class="t">total gross sales</div></div>
+        <div class="kr"><div class="n">0.900</div><div class="t">best r² (ridge)</div></div>
+        <div class="kr"><div class="n">$4,444</div><div class="t">avg miss per day</div></div>
+      </div>
+    </div>
+
+    <article>
+      <!-- 1. The data -->
+      <section class="chapter" id="data">
+        <div class="chnum">01 · the data</div>
+        <h2>Four complete years, zero gaps.</h2>
+        <p>The dataset covers <strong>1,461 daily records, January 1, 2021 to December 31, 2024</strong>. I counted it out: that is exactly every calendar day across those four years, leap day included. Nothing skipped. Each row holds the date, the day's gross sales, which product category sold, and the day of the week.</p>
+        <p>And for once, the data needed no rescue work:</p>
+        <table>
+          <thead><tr><th>Column</th><th class="num">Missing Values</th></tr></thead>
+          <tbody>
+            <tr><td>Sale Date</td><td class="num">0</td></tr>
+            <tr><td>Gross Sales</td><td class="num">0</td></tr>
+            <tr><td>Product Category</td><td class="num">0</td></tr>
+            <tr><td>Day of Week</td><td class="num">0</td></tr>
+          </tbody>
+        </table>
+        <p>The records come from <strong>Massachusetts Cannabis Control Commission</strong> public sales data, and a duplicate check came back with <strong>zero duplicates</strong>. Across all 1,461 days, the average day brought in about <strong>$201,700</strong>, and the middle day sits at almost exactly the same number, so daily sales spread out evenly instead of piling up at one end.</p>
+      </section>
+
+      <!-- 2. Growth -->
+      <section class="chapter" id="growth">
+        <div class="chnum">02 · sales over time</div>
+        <h2>Sales more than doubled in four years.</h2>
+        <p>The totals climbed every single year, from about <strong>$45.7M in 2021 to $100.5M in 2024</strong>. No down years, no drama:</p>
+        <figure>
+          <svg viewBox="0 0 560 250" role="img" aria-label="Bar chart of annual gross sales: 2021 45.69, 2022 63.90, 2023 82.01, 2024 100.45 million dollars">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">annual gross sales ($M)</text>
+            <line x1="60" y1="30" x2="60" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="60" y1="190" x2="540" y2="190" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="100" y="117" width="80" height="73" rx="5" fill="#3DDC97" opacity="0.55"/>
+            <rect x="215" y="88" width="80" height="102" rx="5" fill="#3DDC97" opacity="0.7"/>
+            <rect x="330" y="59" width="80" height="131" rx="5" fill="#3DDC97" opacity="0.85"/>
+            <rect x="445" y="30" width="80" height="160" rx="5" fill="#3DDC97"/>
+            <text x="140" y="107" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">45.7</text>
+            <text x="255" y="78" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">63.9</text>
+            <text x="370" y="49" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">82.0</text>
+            <text x="485" y="22" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">100.5</text>
+            <text x="140" y="208" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0" text-anchor="middle">2021</text>
+            <text x="255" y="208" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0" text-anchor="middle">2022</text>
+            <text x="370" y="208" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0" text-anchor="middle">2023</text>
+            <text x="485" y="208" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0" text-anchor="middle">2024</text>
+          </svg>
+          <figcaption>Steady growth every year, 2021 to 2024.</figcaption>
+        </figure>
+        <p>Zoom in and the same story repeats with natural wiggles. January 2021 opened at $3.52M. That December closed at $4.52M. By December 2024, a single month pulled in $8.89M. The weakest month in the entire dataset was February 2021 at just $2.58M. The line points up and to the right, and that slope later became one of my best forecasting clues.</p>
+        <h3>The last quarter always wins</h3>
+        <p>Quarterly totals tell it again, and one pattern never broke: <strong>the fourth quarter won every single year</strong>:</p>
+        <table>
+          <thead><tr><th>Quarter</th><th class="num">2021</th><th class="num">2022</th><th class="num">2023</th><th class="num">2024</th></tr></thead>
+          <tbody>
+            <tr><td>Q1</td><td class="num">$9.90M</td><td class="num">$14.00M</td><td class="num">$18.17M</td><td class="num">$23.31M</td></tr>
+            <tr><td>Q2</td><td class="num">$10.40M</td><td class="num">$15.47M</td><td class="num">$20.18M</td><td class="num">$24.26M</td></tr>
+            <tr><td>Q3</td><td class="num">$12.28M</td><td class="num">$16.35M</td><td class="num">$21.07M</td><td class="num">$26.22M</td></tr>
+            <tr><td>Q4</td><td class="num">$13.11M</td><td class="num">$18.07M</td><td class="num">$22.59M</td><td class="num">$26.67M</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 3. Categories -->
+      <section class="chapter" id="categories">
+        <div class="chnum">03 · what sold best</div>
+        <h2>Flower leads, but nothing dominates.</h2>
+        <p>Flower brings in the most money at <strong>$103.1M</strong>, but look at the other two bars. Concentrates and Edibles sit right behind it. Nobody is carrying this business alone:</p>
+        <figure>
+          <svg viewBox="0 0 560 220" role="img" aria-label="Bar chart of total sales by category: Flower 103.09, Concentrates 94.99, Edibles 93.98 million dollars">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">total gross sales ($M)</text>
+            <text x="0" y="70" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Flower</text>
+            <rect x="150" y="52" width="370" height="26" rx="6" fill="#3DDC97"/>
+            <text x="524" y="71" font-family="Space Mono, monospace" font-size="12" fill="#EDEAD9">103.1</text>
+            <text x="0" y="125" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Concentrates</text>
+            <rect x="150" y="107" width="341" height="26" rx="6" fill="#3DDC97" opacity="0.7"/>
+            <text x="495" y="126" font-family="Space Mono, monospace" font-size="12" fill="#EDEAD9">95.0</text>
+            <text x="0" y="180" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Edibles</text>
+            <rect x="150" y="162" width="337" height="26" rx="6" fill="#3DDC97" opacity="0.55"/>
+            <text x="491" y="181" font-family="Space Mono, monospace" font-size="12" fill="#EDEAD9">94.0</text>
+          </svg>
+          <figcaption>All three categories pull serious weight.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Category</th><th class="num">Total</th><th class="num">Avg / Day</th><th class="num">Worst Day</th><th class="num">Best Day</th></tr></thead>
+          <tbody>
+            <tr><td>Flower</td><td class="num">$103.09M</td><td class="num">$202,526</td><td class="num">$77,396</td><td class="num">$320,989</td></tr>
+            <tr><td>Concentrates</td><td class="num">$94.99M</td><td class="num">$197,477</td><td class="num">$79,477</td><td class="num">$312,785</td></tr>
+            <tr><td>Edibles</td><td class="num">$93.98M</td><td class="num">$199,528</td><td class="num">$78,696</td><td class="num">$321,025</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 4. Features -->
+      <section class="chapter" id="features">
+        <div class="chnum">04 · preparing the forecast</div>
+        <h2>Teaching the model to look backward.</h2>
+        <p>One day of sales cannot predict the next day by itself. So I gave every day a memory, built from two kinds of clues: <strong>calendar clues</strong> (which month, which weekday, weekend or not, start or end of the month) and <strong>history clues</strong> (what actually sold recently).</p>
+        <p>The history clues are simple ideas:</p>
+        <ul>
+          <li><strong>Yesterday's sales</strong> (lag_1): what sold just one day ago</li>
+          <li><strong>Last week's sales</strong> (lag_7): the same weekday, one week back</li>
+          <li><strong>Last month's sales</strong> (lag_30): the same date, roughly a month back</li>
+          <li><strong>Weekly and monthly averages</strong> (rolling means): the average of the last 7 or 30 days, which smooths out one-off spikes</li>
+        </ul>
+      </section>
+
+      <!-- 5. Correlations -->
+      <section class="chapter" id="correlations">
+        <div class="chnum">05 · what actually predicts sales</div>
+        <h2>Yesterday is the best clue.</h2>
+        <p>Then I measured every clue against real sales on a scale from -1 to 1. A score of 1 means the two move in perfect lockstep:</p>
+        <figure>
+          <svg viewBox="0 0 560 300" role="img" aria-label="Horizontal bar chart of correlations: lag_1 0.99, rolling_mean_7 0.99, lag_7 0.98, time_step 0.97, rolling_mean_30 0.95, Year 0.93, lag_30 0.88">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">clue strength (correlation with sales)</text>
+            <text x="0" y="52" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">yesterday</text>
+            <rect x="170" y="38" width="357" height="20" rx="5" fill="#3DDC97"/>
+            <text x="531" y="54" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.99</text>
+            <text x="0" y="88" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">last-7-day avg</text>
+            <rect x="170" y="74" width="356" height="20" rx="5" fill="#3DDC97" opacity="0.9"/>
+            <text x="531" y="90" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.99</text>
+            <text x="0" y="124" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">last week</text>
+            <rect x="170" y="110" width="352" height="20" rx="5" fill="#3DDC97" opacity="0.8"/>
+            <text x="531" y="126" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.98</text>
+            <text x="0" y="160" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">time trend</text>
+            <rect x="170" y="146" width="348" height="20" rx="5" fill="#FF9F1C" opacity="0.85"/>
+            <text x="531" y="162" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.97</text>
+            <text x="0" y="196" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">last-30-day avg</text>
+            <rect x="170" y="182" width="343" height="20" rx="5" fill="#3DDC97" opacity="0.7"/>
+            <text x="531" y="198" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.95</text>
+            <text x="0" y="232" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">year</text>
+            <rect x="170" y="218" width="336" height="20" rx="5" fill="#FF9F1C" opacity="0.7"/>
+            <text x="531" y="234" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.93</text>
+            <text x="0" y="268" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">last month</text>
+            <rect x="170" y="254" width="316" height="20" rx="5" fill="#3DDC97" opacity="0.6"/>
+            <text x="531" y="270" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">0.88</text>
+          </svg>
+          <figcaption>Recent sales history predicts sales far better than calendar details like weekday.</figcaption>
+        </figure>
+        <p>Yesterday's sales scored <strong>0.99</strong>. In real datasets, it barely gets stronger than that. The overall growth trend came in near 0.97. And the calendar? The day of the week scored around zero. Once you know recent sales, knowing it is a Tuesday tells you almost nothing.</p>
+        <p>Here is the full ranking, exact figures from the analysis. Anything near 1 moves with sales. Anything near 0 is noise:</p>
+        <table>
+          <thead><tr><th>Clue</th><th class="num">Correlation</th></tr></thead>
+          <tbody>
+            <tr><td>Yesterday (lag_1)</td><td class="num">0.9922</td></tr>
+            <tr><td>Last 7 day average</td><td class="num">0.9906</td></tr>
+            <tr><td>Last week (lag_7)</td><td class="num">0.9770</td></tr>
+            <tr><td>Time trend (time_step)</td><td class="num">0.9669</td></tr>
+            <tr><td>Last 30 day average</td><td class="num">0.9518</td></tr>
+            <tr><td>Year</td><td class="num">0.9338</td></tr>
+            <tr><td>Last month (lag_30)</td><td class="num">0.8774</td></tr>
+            <tr><td>Month</td><td class="num">0.2040</td></tr>
+            <tr><td>Q4 flag</td><td class="num">0.1695</td></tr>
+            <tr><td>Day of month</td><td class="num">0.0271</td></tr>
+            <tr><td>Month end flag</td><td class="num">0.0165</td></tr>
+            <tr><td>Day of week</td><td class="num">-0.0009</td></tr>
+            <tr><td>Weekend flag</td><td class="num">-0.0010</td></tr>
+            <tr><td>Month start flag</td><td class="num">-0.0138</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 6. Split -->
+      <section class="chapter" id="testing">
+        <div class="chnum">06 · fair testing</div>
+        <h2>Train on the past, test on the future.</h2>
+        <p>Here is where many forecasts quietly cheat: shuffle the days randomly and the model gets to peek at the future while training. The score looks great and means nothing. So I split the data in calendar order instead:</p>
+        <table>
+          <thead><tr><th>Set</th><th class="num">Days</th><th>Period</th></tr></thead>
+          <tbody>
+            <tr><td>Training</td><td class="num">1,144</td><td>Jan 31, 2021 to Mar 19, 2024</td></tr>
+            <tr><td>Testing</td><td class="num">287</td><td>Mar 20, 2024 to Dec 31, 2024</td></tr>
+          </tbody>
+        </table>
+        <p>The first 30 days went to setup duty, since the 30-day history clues need a month of runway before they exist. After that, the model learned from the past and then faced almost ten months of future it had never seen. No peeking.</p>
+        <p>As one more honesty check, both linear models also went through 5-fold time-series cross-validation on the training data, averaging R² of about 0.70 across folds. Lower than the final test score, which is normal: the early folds train on far less history.</p>
+      </section>
+
+      <!-- 7. Models -->
+      <section class="chapter" id="models">
+        <div class="chnum">07 · the showdown</div>
+        <h2>Simple models beat the fancy ones.</h2>
+        <p>Six approaches went head to head on that unseen future, all on fixed middle of the road settings (200 trees for the forests, 200 rounds for the boosters, Ridge alpha 1.0), so the contest compared approaches rather than tuning luck. The result was not close:</p>
+        <table>
+          <thead><tr><th>Model</th><th class="num">Avg Miss (MAE)</th><th class="num">RMSE</th><th class="num">R²</th></tr></thead>
+          <tbody>
+            <tr class="best"><td>Ridge Regression</td><td class="num">$4,444</td><td class="num">$5,615</td><td class="num">0.900</td></tr>
+            <tr><td>Linear Regression</td><td class="num">$4,445</td><td class="num">$5,616</td><td class="num">0.900</td></tr>
+            <tr class="poor"><td>Gradient Boosting</td><td class="num">$13,760</td><td class="num">$18,168</td><td class="num">-0.050</td></tr>
+            <tr class="poor"><td>Random Forest</td><td class="num">$16,190</td><td class="num">$20,678</td><td class="num">-0.360</td></tr>
+            <tr class="poor"><td>CatBoost</td><td class="num">$18,480</td><td class="num">$23,357</td><td class="num">-0.735</td></tr>
+            <tr class="poor"><td>XGBoost</td><td class="num">$20,212</td><td class="num">$24,844</td><td class="num">-0.963</td></tr>
+          </tbody>
+        </table>
+        <figure>
+          <svg viewBox="0 0 560 280" role="img" aria-label="Diverging bar chart of R²: Ridge and Linear at 0.90, Gradient Boosting -0.05, Random Forest -0.36, CatBoost -0.74, XGBoost -0.96">
+            <text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">R² score (0 = guessing the average)</text>
+            <line x1="230" y1="30" x2="230" y2="246" stroke="rgba(237,234,217,0.4)"/>
+            <text x="230" y="262" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">0</text>
+            <text x="120" y="60" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Ridge 0.90</text>
+            <rect x="230" y="48" width="198" height="20" rx="5" fill="#3DDC97"/>
+            <text x="120" y="96" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Linear 0.90</text>
+            <rect x="230" y="84" width="198" height="20" rx="5" fill="#3DDC97" opacity="0.7"/>
+            <text x="238" y="132" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">GradBoost -0.05</text>
+            <rect x="219" y="120" width="11" height="20" rx="5" fill="#E96B6B" opacity="0.8"/>
+            <text x="238" y="168" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">RandForest -0.36</text>
+            <rect x="151" y="156" width="79" height="20" rx="5" fill="#E96B6B" opacity="0.8"/>
+            <text x="238" y="204" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">CatBoost -0.74</text>
+            <rect x="68" y="192" width="162" height="20" rx="5" fill="#E96B6B" opacity="0.8"/>
+            <text x="238" y="240" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">XGBoost -0.96</text>
+            <rect x="18" y="228" width="212" height="20" rx="5" fill="#E96B6B" opacity="0.8"/>
+          </svg>
+          <figcaption>Green bars beat guessing the average. Red bars lost to it.</figcaption>
+        </figure>
+        <p>Zoom into the first five forecasted days and the misses look ordinary, a few thousand dollars either way on roughly $270K days:</p>
+        <table>
+          <thead><tr><th>Date</th><th class="num">Actual</th><th class="num">Predicted</th><th class="num">Miss</th></tr></thead>
+          <tbody>
+            <tr><td>Mar 20, 2024</td><td class="num">$267,601</td><td class="num">$274,155</td><td class="num">-$6,553</td></tr>
+            <tr><td>Mar 21, 2024</td><td class="num">$268,818</td><td class="num">$275,294</td><td class="num">-$6,476</td></tr>
+            <tr><td>Mar 22, 2024</td><td class="num">$274,052</td><td class="num">$277,959</td><td class="num">-$3,907</td></tr>
+            <tr><td>Mar 23, 2024</td><td class="num">$276,243</td><td class="num">$279,889</td><td class="num">-$3,646</td></tr>
+            <tr><td>Mar 24, 2024</td><td class="num">$272,585</td><td class="num">$280,089</td><td class="num">-$7,503</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 8. Why -->
+      <section class="chapter" id="why">
+        <div class="chnum">08 · why simple won</div>
+        <h2>The data was smooth. The trees wanted bumps.</h2>
+        <p>Here is my read on what happened. These sales move in smooth, steady relationships. Yesterday looks like today, the averages glide, the trend climbs. Straight-line math follows that shape naturally. Tree models work differently: they chop data into boxes, and boxes are a bad way to extend a steady climb into months you have never seen. So they stumbled.</p>
+        <p>Ridge and Linear finished in a genuine dead heat, one dollar apart on the average miss. Ridge won on paper ($4,444 against $4,445), but I drew the final forecast charts with Linear Regression. Same picture, far easier to explain to anyone.</p>
+      </section>
+
+      <!-- 9. Business -->
+      <section class="chapter" id="business">
+        <div class="chnum">09 · what the business learns</div>
+        <h2>Five takeaways for anyone selling.</h2>
+        <ul>
+          <li><strong>Growth is real:</strong> $45.7M a year became $100.5M in four years.</li>
+          <li><strong>Watch yesterday:</strong> recent sales carry almost all the forecasting signal.</li>
+          <li><strong>Flower leads but nothing dominates:</strong> no single category carries the business.</li>
+          <li><strong>Q4 is always biggest:</strong> plan stock and staff around the final quarter.</li>
+          <li><strong>Simple beats complex here:</strong> judge models on unseen data, never on reputation.</li>
+        </ul>
+      </section>
+    </article>
+
+    <section class="conclusion">
+      <div class="chnum" style="font-family:var(--font-mono);font-size:13px;color:var(--signal);margin-bottom:8px">the bottom line</div>
+      <h2>History predicts. Simplicity wins.</h2>
+      <p>Start to finish, this ran the whole pipeline: raw records, validation, exploration, history-based features, honest chronological testing, a six-way model contest, and a business reading at the end. Headline score: <strong>R² 0.900 with an average miss of $4,444 a day</strong>.</p>
+      <p>The number is nice, but the lesson is better. Recent history carried almost all the signal, and the plainest model in the room captured it best. That is a template any business can reuse on its own sales.</p>
+      <blockquote>The best model is decided by performance on unseen data, not by how complicated the algorithm is.</blockquote>
+    </section>
+
+    <div class="back-row">
+      <a class="btn btn-primary" href="index.html#projects">Back to projects</a>
+      <a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/Cannabis-Sales-Forecast" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
