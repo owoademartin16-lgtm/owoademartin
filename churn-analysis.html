@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bank Customer Churn Prediction &amp; Retention Analysis · Martin Owoade</title>
-<meta name="description" content="Full analysis write-up: predicting bank customer churn for 10,000 customers with segmentation, classification modeling and retention strategy.">
+<meta name="description" content="Full case study: predicting bank customer churn for 10,000 customers with segmentation, classification modeling and retention strategy.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -18,6 +18,7 @@
     --line-strong: rgba(237,234,217,0.24);
     --signal: #FF9F1C;
     --teal: #3DDC97;
+    --rose: #E96B6B;
     --gold: #D4AF37;
     --font-display: 'Space Grotesk', sans-serif;
     --font-body: 'Inter', sans-serif;
@@ -142,6 +143,9 @@
     border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 20px 0;
     font-family: var(--font-display); font-size: 19px; color: var(--paper); max-width: 60ch;
   }
+  figure{ margin: 22px 0; }
+  figure svg{ width: 100%; height: auto; display: block; background: var(--ink-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+  figcaption{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-top: 10px; text-align: center; }
   .conclusion{
     background: var(--ink-card); border: 1px solid var(--line-strong);
     border-radius: 20px; padding: 36px; margin-bottom: 60px;
@@ -162,6 +166,7 @@
   .btn-primary:hover{ background: var(--signal); }
   .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
   .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+  .btn svg{ width: 14px; height: 14px; }
   footer{ border-top: 1px solid var(--line); padding: 26px 0 34px; font-size: 13px; color: var(--paper-dim); }
   footer .wrap{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 
@@ -187,7 +192,7 @@
       Back to portfolio
     </a>
     <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/bank-customer-churn-prediction" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2 .67.8 .55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
       View on GitHub
     </a>
   </nav>
@@ -235,6 +240,24 @@
         <p>At first glance, the bank appeared to have a relatively stable customer base. However, comparing retained and churned customers revealed much more important differences.</p>
       </section>
 
+      <!-- Figure 1: Churn Distribution -->
+      <figure>
+        <svg viewBox="0 0 520 300" role="img" aria-label="Donut chart showing overall churn split: 7,960 retained (79.6%) and 2,040 churned (20.4%) across 10,000 customers">
+          <text x="0" y="18" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">overall churn split · 10,000 customers</text>
+          <circle cx="120" cy="150" r="65" fill="none" stroke="rgba(237,234,217,0.12)" stroke-width="10"/>
+          <circle cx="120" cy="150" r="65" fill="none" stroke="#3DDC97" stroke-width="10" stroke-dasharray="408 102" stroke-linecap="round"/>
+          <circle cx="400" cy="150" r="65" fill="none" stroke="rgba(237,234,217,0.12)" stroke-width="10"/>
+          <circle cx="400" cy="150" r="65" fill="none" stroke="#FF9F1C" stroke-width="10" stroke-dasharray="102 408" stroke-linecap="round"/>
+          <text x="120" y="142" font-family="Space Mono, monospace" font-size="15" fill="#EDEAD9" text-anchor="middle">79.6%</text>
+          <text x="120" y="158" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0" text-anchor="middle">retained</text>
+          <text x="400" y="142" font-family="Space Mono, monospace" font-size="15" fill="#FF9F1C" text-anchor="middle">20.4%</text>
+          <text x="400" y="158" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0" text-anchor="middle">churned</text>
+          <text x="120" y="250" font-family="Space Mono, monospace" font-size="11" fill="#3DDC97" text-anchor="middle">7,960 retained</text>
+          <text x="400" y="250" font-family="Space Mono, monospace" font-size="11" fill="#FF9F1C" text-anchor="middle">2,040 churned</text>
+        </svg>
+        <figcaption>One in five customers churned.</figcaption>
+      </figure>
+
       <!-- Ch 2 -->
       <section class="chapter" id="ch2">
         <div class="chnum">chapter 02</div>
@@ -243,6 +266,23 @@
         <h3>Age</h3>
         <p>Retained customers had an average age of approximately <strong>37.4 years</strong>. Churned customers averaged <strong>44.8 years</strong>, a difference of approximately <strong>7.4 years</strong>.</p>
         <p>This does not mean age itself causes churn. Instead, it suggests that age is an important variable associated with customer behavior and should be considered when identifying customers at risk. For the bank, this could mean that older customers require different products, services, or relationship-management strategies than younger customers.</p>
+
+        <!-- Figure 2: Age comparison -->
+        <figure>
+          <svg viewBox="0 0 520 220" role="img" aria-label="Bar chart comparing average age: retained 37.4 years, churned 44.8 years">
+            <text x="0" y="18" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">average age (years)</text>
+            <line x1="70" y1="35" x2="70" y2="160" stroke="rgba(237,234,217,0.25)"/>
+            <line x1="70" y1="160" x2="480" y2="160" stroke="rgba(237,234,217,0.25)"/>
+            <rect x="110" y="95" width="100" height="65" rx="5" fill="#3DDC97"/>
+            <text x="160" y="88" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">37.4</text>
+            <rect x="270" y="60" width="100" height="100" rx="5" fill="#FF9F1C"/>
+            <text x="320" y="53" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">44.8</text>
+            <text x="160" y="180" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Retained</text>
+            <text x="320" y="180" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Churned</text>
+          </svg>
+          <figcaption>Churned customers average 7.4 years older than retained customers.</figcaption>
+        </figure>
+
         <h3>Account Balance</h3>
         <p>Churned customers had an average balance of approximately <strong>$91,109</strong>, compared with <strong>$72,745</strong> for retained customers.</p>
         <p>This was particularly important from a business perspective. The bank is not simply losing customers with small balances. It is potentially losing customers holding substantially more money. A customer with a high balance may represent a significantly greater financial opportunity or risk than a low-balance customer. Therefore, churn prediction can be used not only to identify <em>who might leave</em>, but also to help prioritize <em>which customers should receive retention attention first</em>.</p>
@@ -269,6 +309,28 @@
         <p>The data does not tell us exactly <em>why</em> German customers churn at a higher rate. Possible explanations could include differences in product preferences, customer expectations, competition, service experience, or other factors not captured in the dataset. Rather than assuming the cause, I treat Germany as a <strong>priority market for further investigation and retention analysis</strong>.</p>
       </section>
 
+      <!-- Figure 3: Churn Rate by Geography -->
+      <figure>
+        <svg viewBox="0 0 520 240" role="img" aria-label="Bar chart of churn rate by country: France 16.2%, Germany 32.4%, Spain 16.7%">
+          <text x="0" y="18" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">churn rate (%)</text>
+          <line x1="70" y1="35" x2="70" y2="180" stroke="rgba(237,234,217,0.25)"/>
+          <line x1="70" y1="180" x2="480" y2="180" stroke="rgba(237,234,217,0.25)"/>
+          <!-- France 16.2 (half of Germany) -->
+          <rect x="110" y="110" width="70" height="70" rx="5" fill="#3DDC97"/>
+          <text x="145" y="104" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">16.2</text>
+          <!-- Germany 32.4 (max) -->
+          <rect x="210" y="60" width="70" height="120" rx="5" fill="#E96B6B"/>
+          <text x="245" y="54" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">32.4</text>
+          <!-- Spain 16.7 (half of Germany) -->
+          <rect x="310" y="108" width="70" height="72" rx="5" fill="#FF9F1C"/>
+          <text x="345" y="102" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9" text-anchor="middle">16.7</text>
+          <text x="145" y="200" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">France</text>
+          <text x="245" y="200" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Germany</text>
+          <text x="345" y="200" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Spain</text>
+        </svg>
+        <figcaption>German customers churn at roughly double the rate of French or Spanish customers.</figcaption>
+      </figure>
+
       <!-- Ch 4 -->
       <section class="chapter" id="ch4">
         <div class="chnum">chapter 04</div>
@@ -290,6 +352,46 @@
         <h3>Inactive German Customers</h3>
         <p>This segment contained <strong>819 customers</strong> with a churn rate of approximately <strong>22.2%</strong>. The combination of German geography, inactivity, and the country's high average account balance makes this segment particularly important. A bank could use customer activity signals to identify these customers before they reach the point of account closure.</p>
       </section>
+
+      <!-- Figure 4: Churn Rate by Segment (horizontal, 0-100% axis) -->
+      <figure>
+        <svg viewBox="0 0 560 300" role="img" aria-label="Horizontal bar chart of churn rate by customer segment">
+          <text x="0" y="22" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">churn rate (%)</text>
+          <!-- Y-axis labels (right-aligned, fully visible within expanded left margin) -->
+          <text x="0" y="58" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Multi-Product At-Risk</text>
+          <text x="0" y="102" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Older Single-Product</text>
+          <text x="0" y="146" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Inactive German</text>
+          <text x="0" y="190" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">Low-Risk Core</text>
+          <!-- Axis lines -->
+          <line x1="160" y1="30" x2="160" y2="240" stroke="rgba(237,234,217,0.25)"/>
+          <line x1="160" y1="240" x2="520" y2="240" stroke="rgba(237,234,217,0.25)"/>
+          <!-- Bars (0-100% scale: 340px = 100%, bar starts at x=150) -->
+          <!-- Multi-Product At-Risk: 85.89% -->
+          <rect x="160" y="48" width="309" height="22" rx="5" fill="#E96B6B"/>
+          <text x="472" y="62" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">85.89%</text>
+          <!-- Older Single-Product: 45.18% -->
+          <rect x="160" y="92" width="163" height="22" rx="5" fill="#D4AF37"/>
+          <text x="326" y="106" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">45.18%</text>
+          <!-- Inactive German: 22.22% -->
+          <rect x="160" y="136" width="80" height="22" rx="5" fill="#FF9F1C"/>
+          <text x="242" y="150" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">22.22%</text>
+          <!-- Low-Risk Core: 8.56% -->
+          <rect x="160" y="180" width="31" height="22" rx="5" fill="#3DDC97"/>
+          <text x="193" y="194" font-family="Space Mono, monospace" font-size="11" fill="#EDEAD9">8.56%</text>
+          <!-- X-axis tick marks and labels -->
+          <line x1="160" y1="240" x2="160" y2="246" stroke="rgba(237,234,217,0.45)"/>
+          <text x="160" y="258" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">0%</text>
+          <line x1="250" y1="240" x2="250" y2="246" stroke="rgba(237,234,217,0.45)"/>
+          <text x="250" y="258" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">25%</text>
+          <line x1="340" y1="240" x2="340" y2="246" stroke="rgba(237,234,217,0.45)"/>
+          <text x="340" y="258" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">50%</text>
+          <line x1="430" y1="240" x2="430" y2="246" stroke="rgba(237,234,217,0.45)"/>
+          <text x="430" y="258" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">75%</text>
+          <line x1="520" y1="240" x2="520" y2="246" stroke="rgba(237,234,217,0.45)"/>
+          <text x="520" y="258" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">100%</text>
+        </svg>
+        <figcaption>Multi-product at-risk customers churn at 85.89%, while the low-risk segment sits at just 8.56%.</figcaption>
+      </figure>
 
       <!-- Ch 5 -->
       <section class="chapter" id="ch5">
@@ -389,6 +491,31 @@ Customer Risk Assessment</pre>
         <p>The model correctly identified <strong>274 of the 407 churned customers</strong>. Although CatBoost had better churn recall, Random Forest provided a better overall balance between precision, recall, F1-score, and accuracy, and that distinction matters in a real banking environment.</p>
         <p>If the model flags too many customers who were never going to leave, the bank wastes money on unnecessary discounts, incentives, calls, and relationship-management resources. If it is too conservative, the bank fails to identify valuable customers before they leave. Random Forest offered the more balanced compromise, so I selected it as the <strong>final model</strong>.</p>
       </section>
+
+      <!-- Figure 5: Model Performance Metrics -->
+      <figure>
+        <svg viewBox="0 0 520 260" role="img" aria-label="Bar chart of model performance metrics: Accuracy 0.84, Precision 0.60, Recall 0.67, F1-Score 0.63, ROC-AUC 0.86">
+          <text x="0" y="18" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">score (0 to 1)</text>
+          <line x1="70" y1="35" x2="70" y2="200" stroke="rgba(237,234,217,0.25)"/>
+          <line x1="70" y1="200" x2="480" y2="200" stroke="rgba(237,234,217,0.25)"/>
+          <rect x="110" y="55" width="48" height="145" rx="5" fill="#4E8DC5"/>
+          <text x="134" y="48" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.84</text>
+          <rect x="170" y="108" width="48" height="92" rx="5" fill="#FF9F1C"/>
+          <text x="194" y="101" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.60</text>
+          <rect x="230" y="88" width="48" height="112" rx="5" fill="#3DDC97"/>
+          <text x="254" y="81" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.67</text>
+          <rect x="290" y="100" width="48" height="100" rx="5" fill="#D4AF37"/>
+          <text x="314" y="93" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.63</text>
+          <rect x="350" y="43" width="48" height="157" rx="5" fill="#4E8DC5"/>
+          <text x="374" y="36" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.86</text>
+          <text x="134" y="220" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Accuracy</text>
+          <text x="194" y="220" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Precision</text>
+          <text x="254" y="220" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Recall</text>
+          <text x="314" y="220" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">F1-Score</text>
+          <text x="374" y="220" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">ROC-AUC</text>
+        </svg>
+        <figcaption>The model achieves 84% accuracy with 67% churn recall and a 63% churn F1-score.</figcaption>
+      </figure>
 
       <!-- Ch 10 -->
       <section class="chapter" id="ch10">
