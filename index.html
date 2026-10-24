@@ -629,6 +629,31 @@
             </a>
           </div>
         </article>
+
+        <!-- 8. Loan Risk -->
+        <article class="proj-card reveal" style="--accent:#E96B6B">
+          <div class="proj-meta"><span class="dot"></span>classification · credit risk</div>
+          <h3>Credit Risk Analysis and Loan Default Prediction</h3>
+          <p class="desc">Analysis of 1.35 million LendingClub loan records exploring drivers of default and building models to identify loans at higher risk of default.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Scikit-learn</span>
+            <span class="pill">CatBoost</span><span class="pill">Machine Learning</span><span class="pill">Streamlit</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">19.98%</div><div class="ml">Default rate</div></div>
+            <div class="metric"><div class="mv">60.9%</div><div class="ml">RF accuracy</div></div>
+            <div class="metric"><div class="mv">60.4%</div><div class="ml">RF recall</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:loan" href="https://github.com/owoademartin16-lgtm/loan-risk-analytics" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" data-link="app:loan" href="https://loan-risk-analytics.streamlit.app/" target="_blank" rel="noopener">Live Demo
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7V16"/></svg>
+            </a>
+            <a class="btn-sm" href="loan-risk-analytics-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -822,7 +847,8 @@
       airbnb: "airbnb-price-prediction",
       hospital: "HCAHPS-Patient-Experience-Analysis",
       bank: "bank-customer-churn-prediction",
-      retail: "retail-revenue-prediction-catboost"
+      retail: "retail-revenue-prediction-catboost",
+      loan: "loan-risk-analytics"
     },
     apps: {
       taxi: "https://5f4vefgpj8tbxceqvkq5db.streamlit.app/",
@@ -830,7 +856,8 @@
       electricity: "https://electricity-forecast-azwujqtcenhzfpwb3hhlq7.streamlit.app/",
       bank: "https://bank-customer-churn-prediction-zksfbmzuvux9v7fgvcpygn.streamlit.app/",
       airbnb: "https://airbnb-price-prediction-cuoahebcuticj3p3b5gkse.streamlit.app/",
-      retail: "https://retail-revenue-prediction-catboost-dyb8w8r5nsk8l5mdzsby8l.streamlit.app/"
+      retail: "https://retail-revenue-prediction-catboost-dyb8w8r5nsk8l5mdzsby8l.streamlit.app/",
+      loan: "https://loan-risk-analytics.streamlit.app/"
     },
     email: "martinowoade16@gmail.com",
     linkedin: "https://www.linkedin.com/in/owoade-martin-b00aa439b/"
@@ -840,7 +867,7 @@
     const gh = "https://github.com/" + CONFIG.githubUser;
     document.querySelectorAll('[data-link="profile"]').forEach(el => { el.href = gh; });
     document.querySelectorAll('[data-link-text="profile"]').forEach(el => { el.textContent = gh.replace("https://", ""); });
-    const repoLinks = { taxi: 0, cannabis: 0, electricity: 0, airbnb: 0, hospital: 0, bank: 0, retail: 0 };
+    const repoLinks = { taxi: 0, cannabis: 0, electricity: 0, airbnb: 0, hospital: 0, bank: 0, retail: 0, loan: 0 };
     Object.keys(repoLinks).forEach(key => {
       document.querySelectorAll('[data-link="repo:' + key + '"]').forEach(el => {
         el.href = gh + "/" + CONFIG.repos[key];
