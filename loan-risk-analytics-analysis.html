@@ -88,7 +88,7 @@
     background: var(--ink-card); border: 1px solid var(--line);
     border-radius: 14px; padding: 16px;
   }
-  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--emerald); }
+  .kr .n{ font-family: var(--font-display); font-size: 24px; font-weight: 600; color: #FFD93B; }
   .kr .t{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 4px; }
 
   article{ padding: 24px 0 40px; }
@@ -176,7 +176,7 @@
     .kpis{ grid-template-columns: 1fr 1fr; gap: 10px; }
     .kpi{ padding: 14px; }
     .kpi .label{ font-size: 11px; }
-    .kpi .value{ font-size: 22px; }
+    .kpi .value{ font-size: 22px; color: #FFD93B; }
     .chapter h2{ font-size: clamp(26px, 7vw, 38px); }
     table{ display:block; overflow-x:auto; white-space:nowrap; }
     figure{ overflow-x:auto; }
@@ -232,7 +232,7 @@
           <article>
       <section class="chapter" id="overview">
         <div class="chnum">01 · project overview</div>
-        <h2>Project Overview</h2>
+        <h2>Project overview</h2>
         <p>Why do some borrowers repay their loans while others default? And can historical loan data help a lender spot potential repayment problems before approving a loan?</p>
         <p>I explored these questions using approximately 1.35 million LendingClub loan records. The project started with an analysis of loan repayment patterns and expanded into a machine learning exercise to see how well borrower and loan information could distinguish defaulted loans from non-defaulted loans.</p>
         <p>I focused on seven areas: loan amount, credit score, debt-to-income ratio, loan purpose, employment length, state, and changes in default rates over time. After examining these patterns, I trained and compared three classification models: Decision Tree, Random Forest, and CatBoost.</p>
@@ -241,7 +241,7 @@
 
       <section class="chapter" id="business">
         <div class="chnum">02 · the business question</div>
-        <h2>The Business Question</h2>
+        <h2>The business question</h2>
         <p>For a lender, approving a loan is only part of the decision. The bigger question is whether the borrower is likely to repay it.</p>
         <p>A lender that approves too many loans that eventually default can face financial losses. On the other hand, rejecting borrowers who could repay their loans means missing legitimate lending opportunities.</p>
         <p>I wanted to understand what the historical records could tell us about that trade-off.</p>
@@ -259,7 +259,7 @@
 
       <section class="chapter" id="data">
         <div class="chnum">03 · about the data</div>
-        <h2>About the Data</h2>
+        <h2>About the data</h2>
         <p>The dataset contained 1,347,681 loan records, including borrower characteristics, loan details, and repayment outcomes.</p>
         <table>
           <thead><tr><th>Dataset measure</th><th class="num">Number</th></tr></thead>
@@ -275,7 +275,7 @@
 
       <section class="chapter" id="loan-amount">
         <div class="chnum">04 · larger loans had higher default rates</div>
-        <h2>Larger Loans Had Higher Default Rates</h2>
+        <h2>Larger loans had higher default rates</h2>
         <p>I grouped loans into amount ranges and calculated the default rate for each group.</p>
         <table>
           <thead><tr><th>Loan amount</th><th class="num">Number of loans</th><th class="num">Default rate</th><th class="num">Average loan amount</th></tr></thead>
@@ -326,7 +326,7 @@
 
       <section class="chapter" id="fico">
         <div class="chnum">05 · credit score was one of the clearest risk indicators</div>
-        <h2>Credit Score Was One of the Clearest Risk Indicators</h2>
+        <h2>Credit score was one of the clearest risk indicators</h2>
         <p>I grouped borrowers by FICO score to compare their default rates.</p>
         <table>
           <thead><tr><th>FICO score range</th><th class="num">Number of loans</th><th class="num">Default rate</th><th class="num">Average FICO score</th></tr></thead>
@@ -369,7 +369,7 @@
 
       <section class="chapter" id="purpose">
         <div class="chnum">06 · small business loans had the highest default rate by purpose</div>
-        <h2>Small Business Loans Had the Highest Default Rate by Purpose</h2>
+        <h2>Small business loans had the highest default rate by purpose</h2>
         <table>
           <thead><tr><th>Loan purpose</th><th class="num">Number of loans</th><th class="num">Default rate</th><th class="num">Average loan amount</th></tr></thead>
           <tbody>
@@ -431,7 +431,7 @@
 
       <section class="chapter" id="states">
         <div class="chnum">07 · default rates differed across states</div>
-        <h2>Default Rates Differed Across States</h2>
+        <h2>Default rates differed across states</h2>
         <p>I compared default rates by borrower state to see where the recorded loan outcomes differed most. Location alone doesn't explain credit risk, but it can reveal regional differences in borrower profiles or lending patterns worth investigating.</p>
         <p>To keep the comparison manageable, I focused on the ten states with the highest observed default rates in the dataset.</p>
         <table>
@@ -492,7 +492,7 @@
 
       <section class="chapter" id="years">
         <div class="chnum">08 · default risk changed across loan issue years</div>
-        <h2>Loan Default Rate by Issue Year</h2>
+        <h2>Loan default rate by issue year</h2>
         <p>I looked at default rates by the year a loan was issued to see how they changed over time. Default rates tend to move with the economic cycle, and it's also important to account for how much time has passed for loans to reach their final outcome.</p>
         <p>The dataset spans loans issued from 2007 through 2018, with volume growing dramatically after 2012. Looking at cohorts over time helps show how risk evolved across different lending periods.</p>
         <table>
