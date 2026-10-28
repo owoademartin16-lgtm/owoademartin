@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fraud Detection &amp; Risk Mitigation in Nigerian Banking Transactions · Martin Owoade</title>
+<meta name="description" content="A study of 5 million Nigerian card and transfer transactions. Fraud is flat across days, months, channels and amount bands, and concentrated between 22:00 and 06:59.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0E1512;
+    --ink-card: #141D18;
+    --paper: #EDEAD9;
+    --paper-dim: #A9AFA0;
+    --line: rgba(237,234,217,0.12);
+    --line-strong: rgba(237,234,217,0.24);
+    --signal: #FF9F1C;
+    --teal: #3DDC97;
+    --rose: #E96B6B;
+    --blue: #5B8DEF;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --maxw: 820px;
+  }
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+  html{ scroll-behavior: smooth; scroll-padding-top: 90px; }
+  body{
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before{
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(237,234,217,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,234,217,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 100%);
+  }
+  ::selection{ background: var(--signal); color: var(--ink); }
+  a{ color: inherit; }
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  header{
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(14,21,18,0.88); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav{ display: flex; align-items: center; justify-content: space-between; height: 70px; }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim);
+    text-decoration: none; transition: color .2s;
+  }
+  .back-link:hover{ color: var(--signal); }
+  .back-link svg{ width: 14px; height: 14px; }
+  .nav-gh{
+    display: inline-flex; align-items: center; gap: 7px; font-size: 14px;
+    color: var(--paper-dim); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 8px 16px; text-decoration: none;
+    transition: color .2s, border-color .2s;
+  }
+  .nav-gh:hover{ color: var(--paper); border-color: var(--signal); }
+  .nav-gh svg{ width: 15px; height: 15px; }
+
+  .article-head{ padding: 150px 0 20px; }
+  .kicker{
+    font-family: var(--font-mono); font-size: 13px; color: var(--teal);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .kicker::before{ content: ''; width: 16px; height: 1px; background: var(--teal); }
+  h1{
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .lede{ margin-top: 18px; color: var(--paper-dim); font-size: 17px; max-width: 62ch; }
+
+  .kpis{
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    margin: 38px 0 8px;
+  }
+  .kpi{
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 20px 18px;
+  }
+  .kpi .value{ font-family: var(--font-display); font-size: 27px; font-weight: 600; color: #FFD93B; letter-spacing:-0.01em; line-height:1.15; }
+  .kpi .label{ font-family: var(--font-mono); font-size: 11px; color: var(--paper-dim); margin-top: 7px; line-height:1.45; }
+
+  article{ padding: 24px 0 40px; }
+  .chapter{ margin-bottom: 56px; }
+  .chapter .chnum, .conclusion .chnum{ font-family: var(--font-mono); font-size: 13px; color: var(--signal); margin-bottom: 8px; }
+  .chapter h2{
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem); letter-spacing: -0.01em; margin-bottom: 18px;
+  }
+  .chapter h3{
+    font-family: var(--font-display); font-size: 17px; font-weight: 600;
+    margin: 26px 0 10px; color: var(--paper);
+  }
+  .chapter p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 68ch; }
+  .chapter p strong{ color: var(--paper); font-weight: 600; }
+  .chapter ul, .chapter ol{ color: var(--paper-dim); margin: 0 0 14px 20px; max-width: 66ch; }
+  .chapter li{ margin-bottom: 6px; }
+  .chapter li strong{ color: var(--paper); }
+  .chapter code{
+    font-family: var(--font-mono); font-size: 0.86em;
+    background: var(--ink-card); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 7px; color: var(--teal);
+  }
+
+  .table-wrap{ display:block; width:100%; overflow-x:auto; }
+  table{
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 14px; background: var(--ink-card);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  thead th{
+    font-family: var(--font-mono); font-size: 11.5px; font-weight: 400;
+    color: var(--signal); text-align: left; padding: 12px 14px;
+    border-bottom: 1px solid var(--line-strong); background: rgba(255,159,28,0.05);
+  }
+  tbody td{ padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--paper-dim); }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody td:first-child{ color: var(--paper); }
+  tbody td.num, thead th.num{ text-align: right; font-family: var(--font-mono); font-size: 12.5px; }
+  tbody tr.highlight td{ color: var(--teal); }
+
+  figure{ margin: 22px 0; }
+  figure svg{ width: 100%; height: auto; display: block; background: var(--ink-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  figcaption{ font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); margin-top: 10px; text-align: center; }
+
+  .callout{
+    background: rgba(255,159,28,0.07); border: 1px solid rgba(255,159,28,0.28);
+    border-left: 3px solid var(--signal); border-radius: 12px;
+    padding: 16px 20px; margin: 20px 0;
+  }
+  .callout p{ margin: 0; color: var(--paper); font-size: 15px; }
+  .callout p + p{ margin-top: 8px; }
+
+  .arch{
+    background: var(--ink-card); border: 1px solid var(--line-strong); border-radius: 16px;
+    padding: 22px; margin: 22px 0; font-family: var(--font-mono); font-size: 12px;
+    color: var(--paper-dim); overflow-x: auto;
+  }
+  .arch .row{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:14px; }
+  .arch .box{ border:1px solid var(--line-strong); border-radius:8px; padding:8px 12px; color: var(--paper); white-space:nowrap; }
+  .arch .box.accent{ border-color: rgba(61,220,151,0.5); color: var(--teal); }
+  .arch .arrow{ color: var(--signal); }
+  .arch .cap{ font-size:11px; color:var(--paper-dim); }
+
+  .conclusion{
+    background: var(--ink-card); border: 1px solid var(--line-strong);
+    border-radius: 20px; padding: 36px; margin-bottom: 60px;
+  }
+  .conclusion h2{
+    font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .conclusion p{ color: var(--paper-dim); margin-bottom: 14px; max-width: 66ch; }
+  .conclusion p strong{ color: var(--paper); }
+
+  blockquote{
+    border-left: 3px solid var(--signal); padding: 6px 0 6px 20px; margin: 26px 0 0;
+    font-family: var(--font-display); font-size: 20px; line-height: 1.45;
+    color: var(--paper); max-width: 56ch;
+  }
+
+  .back-row{ display:flex; flex-wrap:wrap; gap:12px; margin: 56px 0 80px; }
+  .btn{
+    font-weight: 500; font-size: 14.5px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .btn-primary{ background: var(--paper); color: var(--ink); }
+  .btn-primary:hover{ background: var(--signal); }
+  .btn-ghost{ border: 1px solid var(--line-strong); color: var(--paper); }
+  .btn-ghost:hover{ border-color: var(--signal); color: var(--signal); }
+
+  footer{ border-top: 1px solid var(--line); padding: 28px 0 40px; position: relative; z-index: 1; }
+  footer .wrap{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; font-family: var(--font-mono); font-size: 13px; color: var(--paper-dim); }
+
+  @media (max-width: 720px){
+    .wrap{ padding: 0 16px; }
+    nav{ height: 64px; }
+    header .back-link span{ display:none; }
+    .article-head{ padding: 108px 0 10px; }
+    .kpis{ grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kpi{ padding: 14px 13px; }
+    .kpi .value{ font-size: 21px; }
+    .kpi .label{ font-size: 10px; }
+    table{ font-size: 11.5px; }
+    thead th, tbody td{ padding: 7px 8px; white-space: normal; word-break: break-word; }
+    tbody td.num, thead th.num{ font-size: 10.5px; }
+    figure{ display:block; width:100%; overflow-x:auto; }
+    figure svg{ width:100%; min-width: 0; height:auto; }
+    .conclusion{ padding: 24px; }
+    .back-row{ flex-direction:column; align-items:flex-start; }
+    footer .wrap{ flex-direction:column; align-items:flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    html{ scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap" aria-label="Page navigation">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <span>Back to portfolio</span>
+    </a>
+    <a class="nav-gh" href="https://github.com/owoademartin16-lgtm/nigerian-card-fraud-analysis" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+      GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="article-head">
+      <div class="kicker">case study · card fraud · 2023 to 2024</div>
+      <h1>Fraud Detection &amp; Risk Mitigation in Nigerian Banking Transactions</h1>
+      <p class="lede">Nigeria's retail banks processed <strong>5,000,000 transactions worth ₦328.11 billion</strong> between January 2023 and December 2024. <strong>40,000</strong> of them were fraudulent, worth <strong>₦2.66 billion</strong>. I wanted to know where that loss concentrates, what separates it from legitimate traffic, and what a risk team should do about it.</p>
+
+      <div class="kpis">
+        <div class="kpi"><div class="value">5.0M</div><div class="label">transactions analysed</div></div>
+        <div class="kpi"><div class="value">40,000</div><div class="label">fraud cases</div></div>
+        <div class="kpi"><div class="value">0.80%</div><div class="label">fraud rate</div></div>
+        <div class="kpi"><div class="value">₦2.66B</div><div class="label">fraud value</div></div>
+        <div class="kpi"><div class="value">99.1%</div><div class="label">of fraud between 22:00 and 06:59</div></div>
+      </div>
+
+    </div>
+
+    <article>
+      <section class="chapter" id="data">
+        <div class="chnum">01 · the data</div>
+        <h2>Five million rows, sixteen columns, one fraud flag.</h2>
+        <p>The dataset is a public release of Nigerian retail banking transactions. It covers the transaction, the customer and account, the device, the merchant and the location. The target is a single boolean, <code>fraud_flag</code>.</p>
+        <p>The data was clean: no missing values, no duplicate rows. It was heavy, at 1.1 GB in memory. Downcasting the three monetary columns to 32-bit floats and converting the repeated strings to categorical types brought it to <strong>741.5 MB</strong>, which made every groupby fast enough to iterate on.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dataset measure</th><th class="num">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Transactions</td><td class="num">5,000,000</td></tr>
+            <tr><td>Columns</td><td class="num">16</td></tr>
+            <tr><td>Period covered</td><td class="num">Jan 2023 to Dec 2024</td></tr>
+            <tr><td>Total value processed</td><td class="num">₦328,109,948,928</td></tr>
+            <tr><td>Fraudulent transactions</td><td class="num">40,000</td></tr>
+            <tr><td>Fraud value</td><td class="num">₦2,660,513,024</td></tr>
+            <tr><td>Average transaction</td><td class="num">₦65,621.99</td></tr>
+            <tr><td>Average fraudulent transaction</td><td class="num">₦66,512.83</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p>The last two rows already say something. The average fraudulent ticket is <strong>₦891</strong> larger than the average legitimate one. Fraud here is not a large-transaction problem.</p>
+        <p><em>All figures describe this public dataset. They are not a measured estimate of national fraud incidence.</em></p>
+      </section>
+
+      <section class="chapter" id="hour">
+        <div class="chnum">question 01 · when does fraud happen</div>
+        <h2>Fraud runs on the night shift. Daylight is almost clean.</h2>
+        <p>I grouped every transaction by hour of day and calculated the fraud rate inside each hour. The result is the sharpest pattern in the data.</p>
+        <figure>
+          <svg viewBox="0 0 620 312" role="img" aria-label="Fraud rate by hour of day">
+<text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">fraud rate (%) by hour of day</text>
+<text x="602" y="30" font-family="Space Mono, monospace" font-size="10" fill="#E96B6B" text-anchor="end">22:00–06:59 · 99.1% of all frauds</text>
+<rect x="555.7" y="46" width="46.3" height="194" fill="rgba(233,107,107,0.07)"/>
+<rect x="46" y="46" width="162.2" height="194" fill="rgba(233,107,107,0.07)"/>
+<line x1="46" y1="240.0" x2="602" y2="240.0" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="243.0" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0%</text>
+<line x1="46" y1="194.4" x2="602" y2="194.4" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="197.4" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">2%</text>
+<line x1="46" y1="148.7" x2="602" y2="148.7" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="151.7" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">4%</text>
+<line x1="46" y1="103.1" x2="602" y2="103.1" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="106.1" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">6%</text>
+<line x1="46" y1="57.4" x2="602" y2="57.4" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="60.4" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">8%</text>
+<line x1="46" y1="46" x2="46" y2="240" stroke="rgba(237,234,217,0.25)"/>
+<line x1="46" y1="240" x2="602" y2="240" stroke="rgba(237,234,217,0.25)"/>
+<rect x="50.1" y="68.2" width="15" height="171.8" rx="3" fill="#E96B6B"/>
+<text x="57.6" y="62.2" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">7.5</text>
+<text x="57.6" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">00</text>
+<rect x="73.2" y="65.7" width="15" height="174.3" rx="3" fill="#E96B6B"/>
+<text x="80.8" y="59.7" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">7.6</text>
+<rect x="96.4" y="56.6" width="15" height="183.4" rx="3" fill="#E96B6B"/>
+<text x="103.9" y="50.6" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">8.0</text>
+<text x="103.9" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">02</text>
+<rect x="119.6" y="69.7" width="15" height="170.3" rx="3" fill="#E96B6B"/>
+<text x="127.1" y="63.7" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">7.5</text>
+<rect x="142.8" y="57.7" width="15" height="182.3" rx="3" fill="#E96B6B"/>
+<text x="150.3" y="51.7" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">8.0</text>
+<text x="150.3" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">04</text>
+<rect x="165.9" y="63.9" width="15" height="176.1" rx="3" fill="#E96B6B"/>
+<text x="173.4" y="57.9" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">7.7</text>
+<rect x="189.1" y="65.7" width="15" height="174.3" rx="3" fill="#E96B6B"/>
+<text x="196.6" y="59.7" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">7.6</text>
+<text x="196.6" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">06</text>
+<rect x="212.3" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="235.4" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<text x="242.9" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">08</text>
+<rect x="258.6" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="281.8" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<text x="289.2" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">10</text>
+<rect x="304.9" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="328.1" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<text x="335.6" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">12</text>
+<rect x="351.2" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="374.4" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<text x="381.9" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">14</text>
+<rect x="397.6" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="420.8" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<text x="428.2" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">16</text>
+<rect x="443.9" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="467.1" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<text x="474.6" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">18</text>
+<rect x="490.2" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="513.4" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<text x="520.9" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">20</text>
+<rect x="536.6" y="237.5" width="15" height="2.5" rx="3" fill="#3DDC97"/>
+<rect x="559.8" y="62.9" width="15" height="177.1" rx="3" fill="#E96B6B"/>
+<text x="567.3" y="56.9" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">7.8</text>
+<text x="567.3" y="258" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">22</text>
+<rect x="582.9" y="66.5" width="15" height="173.5" rx="3" fill="#E96B6B"/>
+<text x="590.4" y="60.5" font-family="Space Mono, monospace" font-size="8" fill="#EDEAD9" text-anchor="middle">7.6</text>
+<text x="46" y="280" font-family="Space Mono, monospace" font-size="9" fill="#3DDC97">daytime baseline (07:00–21:00): 0.0036% to 0.0132%</text>
+</svg>
+          <figcaption>Nine hours carry 99.1% of all fraud.</figcaption>
+        </figure>
+        <p>Nine clock hours, <strong>22:00 through 06:59</strong>, hold <strong>39,634 of the 40,000 cases</strong>. The rate peaks at 02:00 (8.03%), 04:00 (7.99%) and 22:00 (7.76%). The other fifteen hours share 366 cases, at rates from 0.0036% to 0.0132%.</p>
+        <p><strong>22:00 alone accounts for 12,924 cases</strong>, or 32.3% of all fraud, because it is both a high-rate hour and a high-volume one. The overnight window carries 515,882 transactions, 10.3% of volume, and almost every fraud in the file.</p>
+      </section>
+
+      <section class="chapter" id="calendar">
+        <div class="chnum">question 02 · do day and month matter</div>
+        <h2>Weekdays and months are flat. Only the hour moves.</h2>
+        <p>I tested the other time dimensions to see whether the effect belonged to the clock or to some larger cycle. It belongs to the clock.</p>
+        <figure>
+          <svg viewBox="0 0 620 236" role="img" aria-label="Fraud rate by day of week">
+<text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">fraud rate (%) by day of week</text>
+<line x1="46" y1="178.0" x2="602" y2="178.0" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="181.0" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0.00</text>
+<line x1="46" y1="134.0" x2="602" y2="134.0" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="137.0" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0.30</text>
+<line x1="46" y1="90.0" x2="602" y2="90.0" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="93.0" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0.60</text>
+<line x1="46" y1="46.0" x2="602" y2="46.0" stroke="rgba(237,234,217,0.12)"/>
+<text x="38" y="49.0" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0.90</text>
+<line x1="46" y1="46" x2="46" y2="178" stroke="rgba(237,234,217,0.25)"/>
+<line x1="46" y1="178" x2="602" y2="178" stroke="rgba(237,234,217,0.25)"/>
+<rect x="62.7" y="59.6" width="46" height="118.4" rx="3" fill="#3DDC97" opacity="0.85"/>
+<text x="85.7" y="52.6" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.81</text>
+<text x="85.7" y="196" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Mon</text>
+<rect x="142.1" y="63.7" width="46" height="114.3" rx="3" fill="#3DDC97" opacity="0.85"/>
+<text x="165.1" y="56.7" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.78</text>
+<text x="165.1" y="196" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Tue</text>
+<rect x="221.6" y="59.3" width="46" height="118.7" rx="3" fill="#3DDC97" opacity="0.85"/>
+<text x="244.6" y="52.3" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.81</text>
+<text x="244.6" y="196" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Wed</text>
+<rect x="301.0" y="60.6" width="46" height="117.4" rx="3" fill="#3DDC97" opacity="0.85"/>
+<text x="324.0" y="53.6" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.80</text>
+<text x="324.0" y="196" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Thu</text>
+<rect x="380.4" y="60.0" width="46" height="118.0" rx="3" fill="#3DDC97" opacity="0.85"/>
+<text x="403.4" y="53.0" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.80</text>
+<text x="403.4" y="196" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Fri</text>
+<rect x="459.9" y="61.6" width="46" height="116.4" rx="3" fill="#3DDC97" opacity="0.85"/>
+<text x="482.9" y="54.6" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.79</text>
+<text x="482.9" y="196" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Sat</text>
+<rect x="539.3" y="59.8" width="46" height="118.2" rx="3" fill="#3DDC97" opacity="0.85"/>
+<text x="562.3" y="52.8" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="middle">0.81</text>
+<text x="562.3" y="196" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0" text-anchor="middle">Sun</text>
+<text x="46" y="220" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0">every weekday sits within 0.03 percentage points of the 0.80% portfolio average</text>
+</svg>
+          <figcaption>Seven weekdays, one rate: 0.78% to 0.81%.</figcaption>
+        </figure>
+        <p>Monday 0.807%, Tuesday 0.779%, Wednesday 0.809%, Thursday 0.801%, Friday 0.804%, Saturday 0.793%, Sunday 0.806%. The full spread is <strong>0.03 percentage points</strong>.</p>
+        <figure>
+          <svg viewBox="0 0 620 280" role="img" aria-label="Monthly fraud rate">
+<text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">monthly fraud rate (%) · jan 2023 to dec 2024</text>
+<line x1="52" y1="193.5" x2="598" y2="193.5" stroke="rgba(237,234,217,0.12)"/>
+<text x="44" y="196.5" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0.75</text>
+<line x1="52" y1="131.2" x2="598" y2="131.2" stroke="rgba(237,234,217,0.12)"/>
+<text x="44" y="134.2" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0.80</text>
+<line x1="52" y1="68.9" x2="598" y2="68.9" stroke="rgba(237,234,217,0.12)"/>
+<text x="44" y="71.9" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="end">0.85</text>
+<line x1="52" y1="129.2" x2="598" y2="129.2" stroke="#FF9F1C" stroke-dasharray="5 5" opacity="0.75"/>
+<line x1="458" y1="30" x2="480" y2="30" stroke="#FF9F1C" stroke-dasharray="5 5" opacity="0.9"/>
+<text x="486" y="33" font-family="Space Mono, monospace" font-size="9" fill="#FF9F1C">portfolio average 0.80%</text>
+<path d="M52.0,128.9 L75.7,116.9 L99.5,133.9 L123.2,112.1 L147.0,93.7 L170.7,155.8 L194.4,152.9 L218.2,95.3 L241.9,127.3 L265.7,152.0 L289.4,142.7 L313.1,119.9 L336.9,174.2 L360.6,72.8 L384.3,126.4 L408.1,162.5 L431.8,146.8 L455.6,99.7 L479.3,174.6 L503.0,165.8 L526.8,108.4 L550.5,134.0 L574.3,123.8 L598.0,122.7" fill="none" stroke="#3DDC97" stroke-width="2"/>
+<circle cx="52.0" cy="128.9" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="75.7" cy="116.9" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="99.5" cy="133.9" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="123.2" cy="112.1" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="147.0" cy="93.7" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="170.7" cy="155.8" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="194.4" cy="152.9" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="218.2" cy="95.3" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="241.9" cy="127.3" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="265.7" cy="152.0" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="289.4" cy="142.7" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="313.1" cy="119.9" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="336.9" cy="174.2" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="360.6" cy="72.8" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="384.3" cy="126.4" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="408.1" cy="162.5" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="431.8" cy="146.8" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="455.6" cy="99.7" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="479.3" cy="174.6" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="503.0" cy="165.8" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="526.8" cy="108.4" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="550.5" cy="134.0" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="574.3" cy="123.8" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<circle cx="598.0" cy="122.7" r="2.6" fill="#141D18" stroke="#3DDC97" stroke-width="1.6"/>
+<text x="360.6" y="63.8" font-family="Space Mono, monospace" font-size="9" fill="#EDEAD9" text-anchor="middle">0.847</text>
+<text x="479.3" y="165.6" font-family="Space Mono, monospace" font-size="9" fill="#EDEAD9" text-anchor="middle">0.765</text>
+<text x="52.0" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Jan 23</text>
+<text x="123.2" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Apr 23</text>
+<text x="194.4" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Jul 23</text>
+<text x="265.7" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Oct 23</text>
+<text x="336.9" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Jan 24</text>
+<text x="408.1" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Apr 24</text>
+<text x="479.3" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Jul 24</text>
+<text x="550.5" y="224" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0" text-anchor="middle">Oct 24</text>
+<text x="52" y="248" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0">range across 24 months: 0.765% to 0.847% (0.08 pp) · no trend, no seasonality</text>
+</svg>
+          <figcaption>Twenty-four months inside a 0.08-point band.</figcaption>
+        </figure>
+        <p>Monthly rates move between 0.765% (July 2024) and 0.847% (February 2024), <strong>0.08 points around a 0.80% average</strong>. Monthly losses follow volume, not risk: ₦87.1M in February 2023, ₦132.9M in September 2024.</p>
+        <p>Look only at the calendar and fraud looks uniform. Look at the clock and it is not.</p>
+      </section>
+
+      <section class="chapter" id="channel">
+        <div class="chnum">question 03 · where does the money go</div>
+        <h2>Mobile and POS carry two-thirds of the losses.</h2>
+        <figure>
+          <svg viewBox="0 0 620 286" role="img" aria-label="fraud losses by channel (₦)">
+<text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">fraud losses by channel (₦)</text>
+<line x1="166" y1="40" x2="166" y2="244" stroke="rgba(237,234,217,0.25)"/>
+<text x="158" y="59" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">mobile</text>
+<rect x="166" y="47" width="371.7" height="16" rx="3" fill="#E96B6B"/>
+<text x="544.7" y="59" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦939.4M</text>
+<text x="158" y="89" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">pos</text>
+<rect x="166" y="77" width="314.1" height="16" rx="3" fill="#E96B6B"/>
+<text x="487.1" y="89" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦793.8M</text>
+<text x="158" y="119" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">atm</text>
+<rect x="166" y="107" width="217.8" height="16" rx="3" fill="#E96B6B"/>
+<text x="390.8" y="119" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦550.3M</text>
+<text x="158" y="149" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">web</text>
+<rect x="166" y="137" width="97.1" height="16" rx="3" fill="#E96B6B"/>
+<text x="270.1" y="149" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦245.4M</text>
+<text x="158" y="179" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">branch</text>
+<rect x="166" y="167" width="35.3" height="16" rx="3" fill="#E96B6B"/>
+<text x="208.3" y="179" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦89.1M</text>
+<text x="158" y="209" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">ussd</text>
+<rect x="166" y="197" width="11.3" height="16" rx="3" fill="#E96B6B"/>
+<text x="184.3" y="209" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦28.6M</text>
+<text x="158" y="239" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">agent</text>
+<rect x="166" y="227" width="5.6" height="16" rx="3" fill="#E96B6B"/>
+<text x="178.6" y="239" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦14.0M</text>
+<text x="0" y="280" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0">mobile + pos = ₦1.73bn, or 65.1% of all fraud value</text>
+</svg>
+          <figcaption>₦1.73 billion of ₦2.66 billion leaves through two channels.</figcaption>
+        </figure>
+        <div class="table-wrap">
+        <table><thead><tr><th>Channel</th><th class="num">Transactions</th><th class="num">Fraud count</th><th class="num">Fraud rate</th><th class="num">Fraud value</th><th class="num">Share of losses</th></tr></thead><tbody>
+<tr><td>mobile</td><td class="num">1,749,043</td><td class="num">13,813</td><td class="num">0.790%</td><td class="num">₦939,364,992</td><td class="num">35.3%</td></tr>
+<tr><td>pos</td><td class="num">1,501,370</td><td class="num">12,059</td><td class="num">0.803%</td><td class="num">₦793,753,472</td><td class="num">29.8%</td></tr>
+<tr><td>atm</td><td class="num">999,469</td><td class="num">8,025</td><td class="num">0.803%</td><td class="num">₦550,250,496</td><td class="num">20.7%</td></tr>
+<tr><td>web</td><td class="num">500,493</td><td class="num">4,012</td><td class="num">0.802%</td><td class="num">₦245,441,200</td><td class="num">9.2%</td></tr>
+<tr><td>branch</td><td class="num">149,372</td><td class="num">1,261</td><td class="num">0.844%</td><td class="num">₦89,091,000</td><td class="num">3.3%</td></tr>
+<tr><td>ussd</td><td class="num">75,336</td><td class="num">619</td><td class="num">0.822%</td><td class="num">₦28,582,900</td><td class="num">1.1%</td></tr>
+<tr><td>agent</td><td class="num">24,917</td><td class="num">211</td><td class="num">0.847%</td><td class="num">₦14,029,000</td><td class="num">0.5%</td></tr>
+</tbody></table>
+        </div>
+        <p>By value the ranking follows volume. Mobile <strong>₦939.4M (35.3%)</strong>, POS <strong>₦793.8M (29.8%)</strong> and ATM <strong>₦550.3M (20.7%)</strong> hold 85.8% of all losses. Mobile and POS alone hold <strong>65.1%</strong>.</p>
+        <p>By rate the ranking inverts. Agent 0.847%, branch 0.844% and USSD 0.822% sit above the 0.800% benchmark; mobile runs at 0.790%. The gap is only <strong>0.06 points</strong>, but it favours the channels with the least digital telemetry.</p>
+      </section>
+
+      <section class="chapter" id="state">
+        <div class="chnum">question 04 · which states carry the risk</div>
+        <h2>Bayelsa has the highest rate. Kaduna loses the most money.</h2>
+        <figure>
+          <svg viewBox="0 0 620 396" role="img" aria-label="top 10 states by fraud rate (%)">
+<text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">top 10 states by fraud rate (%)</text>
+<line x1="166" y1="40" x2="166" y2="354" stroke="rgba(237,234,217,0.25)"/>
+<text x="158" y="55" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Bayelsa</text>
+<text x="158" y="66" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">6,347 txns</text>
+<rect x="166" y="47" width="367.0" height="16" rx="3" fill="#FF9F1C"/>
+<text x="540.0" y="59" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">1.134%</text>
+<text x="158" y="87" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Gombe</text>
+<text x="158" y="98" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">11,756 txns</text>
+<rect x="166" y="79" width="319.2" height="16" rx="3" fill="#FF9F1C"/>
+<text x="492.2" y="91" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.987%</text>
+<text x="158" y="119" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Nasarawa</text>
+<text x="158" y="130" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">11,413 txns</text>
+<rect x="166" y="111" width="280.6" height="16" rx="3" fill="#FF9F1C"/>
+<text x="453.6" y="123" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.867%</text>
+<text x="158" y="151" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Cross River</text>
+<text x="158" y="162" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">45,599 txns</text>
+<rect x="166" y="143" width="280.2" height="16" rx="3" fill="#FF9F1C"/>
+<text x="453.2" y="155" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.866%</text>
+<text x="158" y="183" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Yobe</text>
+<text x="158" y="194" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">15,820 txns</text>
+<rect x="166" y="175" width="278.1" height="16" rx="3" fill="#FF9F1C"/>
+<text x="451.1" y="187" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.860%</text>
+<text x="158" y="215" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Borno</text>
+<text x="158" y="226" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">46,956 txns</text>
+<rect x="166" y="207" width="273.5" height="16" rx="3" fill="#FF9F1C"/>
+<text x="446.5" y="219" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.845%</text>
+<text x="158" y="247" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Kaduna</text>
+<text x="158" y="258" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">159,387 txns</text>
+<rect x="166" y="239" width="271.8" height="16" rx="3" fill="#FF9F1C"/>
+<text x="444.8" y="251" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.840%</text>
+<text x="158" y="279" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Zamfara</text>
+<text x="158" y="290" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">25,685 txns</text>
+<rect x="166" y="271" width="269.5" height="16" rx="3" fill="#FF9F1C"/>
+<text x="442.5" y="283" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.833%</text>
+<text x="158" y="311" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Edo</text>
+<text x="158" y="322" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">125,496 txns</text>
+<rect x="166" y="303" width="268.8" height="16" rx="3" fill="#FF9F1C"/>
+<text x="441.8" y="315" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.831%</text>
+<text x="158" y="343" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Bauchi</text>
+<text x="158" y="354" font-family="Space Mono, monospace" font-size="8" fill="#A9AFA0" text-anchor="end">42,255 txns</text>
+<rect x="166" y="335" width="267.9" height="16" rx="3" fill="#FF9F1C"/>
+<text x="440.9" y="347" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">0.828%</text>
+<text x="0" y="390" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0">national average: 0.800% · orange bars sit above the benchmark</text>
+</svg>
+          <figcaption>Bayelsa is the only state above 1%.</figcaption>
+        </figure>
+        <p>Bayelsa records <strong>1.134%</strong>, about 1.4 times the national average, on 6,347 transactions and 72 cases. Gombe (0.987%) and Nasarawa (0.867%) follow, also on small bases. Eight of the ten states sit under 50,000 transactions, where a handful of cases moves the rate.</p>
+        <figure>
+          <svg viewBox="0 0 620 376" role="img" aria-label="fraud losses by state (₦, top 10 by rate)">
+<text x="0" y="16" font-family="Space Mono, monospace" font-size="11" fill="#A9AFA0">fraud losses by state (₦, top 10 by rate)</text>
+<line x1="166" y1="40" x2="166" y2="334" stroke="rgba(237,234,217,0.25)"/>
+<text x="158" y="59" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Kaduna</text>
+<rect x="166" y="47" width="362.5" height="16" rx="3" fill="#E96B6B"/>
+<text x="535.5" y="59" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦87.7M</text>
+<text x="158" y="89" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Edo</text>
+<rect x="166" y="77" width="269.6" height="16" rx="3" fill="#E96B6B"/>
+<text x="442.6" y="89" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦65.2M</text>
+<text x="158" y="119" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Cross River</text>
+<rect x="166" y="107" width="129.1" height="16" rx="3" fill="#E96B6B"/>
+<text x="302.1" y="119" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦31.2M</text>
+<text x="158" y="149" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Bauchi</text>
+<rect x="166" y="137" width="107.7" height="16" rx="3" fill="#E96B6B"/>
+<text x="280.7" y="149" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦26.1M</text>
+<text x="158" y="179" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Borno</text>
+<rect x="166" y="167" width="103.9" height="16" rx="3" fill="#E96B6B"/>
+<text x="276.9" y="179" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦25.1M</text>
+<text x="158" y="209" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Zamfara</text>
+<rect x="166" y="197" width="48.4" height="16" rx="3" fill="#E96B6B"/>
+<text x="221.4" y="209" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦11.7M</text>
+<text x="158" y="239" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Yobe</text>
+<rect x="166" y="227" width="42.4" height="16" rx="3" fill="#E96B6B"/>
+<text x="215.4" y="239" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦10.3M</text>
+<text x="158" y="269" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Gombe</text>
+<rect x="166" y="257" width="34.9" height="16" rx="3" fill="#E96B6B"/>
+<text x="207.9" y="269" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦8.5M</text>
+<text x="158" y="299" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Nasarawa</text>
+<rect x="166" y="287" width="34.3" height="16" rx="3" fill="#E96B6B"/>
+<text x="207.3" y="299" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦8.3M</text>
+<text x="158" y="329" font-family="Space Mono, monospace" font-size="10" fill="#EDEAD9" text-anchor="end">Bayelsa</text>
+<rect x="166" y="317" width="29.8" height="16" rx="3" fill="#E96B6B"/>
+<text x="202.8" y="329" font-family="Space Mono, monospace" font-size="10" fill="#A9AFA0">₦7.2M</text>
+<text x="0" y="370" font-family="Space Mono, monospace" font-size="9" fill="#A9AFA0">the same ten states, re-ranked by money lost rather than by rate</text>
+</svg>
+          <figcaption>The same ten states, re-ranked by money lost.</figcaption>
+        </figure>
+        <div class="table-wrap">
+        <table><thead><tr><th>State</th><th class="num">Transactions</th><th class="num">Fraud count</th><th class="num">Fraud rate</th><th class="num">Fraud value</th></tr></thead><tbody>
+<tr class="highlight"><td>Bayelsa</td><td class="num">6,347</td><td class="num">72</td><td class="num">1.134%</td><td class="num">₦7,210,200</td></tr>
+<tr><td>Gombe</td><td class="num">11,756</td><td class="num">116</td><td class="num">0.987%</td><td class="num">₦8,452,800</td></tr>
+<tr><td>Nasarawa</td><td class="num">11,413</td><td class="num">99</td><td class="num">0.867%</td><td class="num">₦8,306,200</td></tr>
+<tr><td>Cross River</td><td class="num">45,599</td><td class="num">395</td><td class="num">0.866%</td><td class="num">₦31,223,400</td></tr>
+<tr><td>Yobe</td><td class="num">15,820</td><td class="num">136</td><td class="num">0.860%</td><td class="num">₦10,269,900</td></tr>
+<tr><td>Borno</td><td class="num">46,956</td><td class="num">397</td><td class="num">0.845%</td><td class="num">₦25,125,500</td></tr>
+<tr class="highlight"><td>Kaduna</td><td class="num">159,387</td><td class="num">1,339</td><td class="num">0.840%</td><td class="num">₦87,711,904</td></tr>
+<tr><td>Zamfara</td><td class="num">25,685</td><td class="num">214</td><td class="num">0.833%</td><td class="num">₦11,720,300</td></tr>
+<tr><td>Edo</td><td class="num">125,496</td><td class="num">1,043</td><td class="num">0.831%</td><td class="num">₦65,215,800</td></tr>
+<tr><td>Bauchi</td><td class="num">42,255</td><td class="num">350</td><td class="num">0.828%</td><td class="num">₦26,066,300</td></tr>
+</tbody></table>
+        </div>
+        <p>By money the order changes. <strong>Kaduna loses ₦87.7M</strong> across 159,387 transactions at 0.840%, on a base 25 times Bayelsa's. <strong>Edo follows at ₦65.2M</strong> (0.831%). Together they hold ₦152.9M, or <strong>5.75% of all fraud value</strong>.</p>
+        <p>The ten highest-rate states hold 9.81% of volume and 10.57% of value. Rate and volume are close to independent, which is why both lists matter.</p>
+      </section>
+
+      <section class="chapter" id="flat">
+        <div class="chnum">question 05 · what does not separate fraud</div>
+        <h2>Amount, type and merchant category separate nothing.</h2>
+        <p>I tested the variables fraud rules usually reach for first. None of them held.</p>
+        <div class="table-wrap">
+        <table><thead><tr><th>Amount band</th><th class="num">Transactions</th><th class="num">Frauds</th><th class="num">Fraud rate</th></tr></thead><tbody>
+<tr><td>₦0–₦1,000</td><td class="num">394,079</td><td class="num">3,148</td><td class="num">0.799%</td></tr>
+<tr><td>₦1,001–₦5,000</td><td class="num">1,079,908</td><td class="num">8,709</td><td class="num">0.806%</td></tr>
+<tr><td>₦5,001–₦10,000</td><td class="num">713,870</td><td class="num">5,692</td><td class="num">0.797%</td></tr>
+<tr><td>₦10,001–₦50,000</td><td class="num">1,654,109</td><td class="num">13,237</td><td class="num">0.800%</td></tr>
+<tr><td>₦50,001–₦100,000</td><td class="num">499,933</td><td class="num">3,835</td><td class="num">0.767%</td></tr>
+<tr><td>Above ₦100,000</td><td class="num">658,101</td><td class="num">5,379</td><td class="num">0.817%</td></tr>
+</tbody></table>
+        </div>
+        <p>Fraud rate by amount band runs from 0.767% to 0.817%, a spread of <strong>0.05 points</strong>, with no order. Credits run at 0.805% and debits at 0.797%, a gap of 0.008 points.</p>
+        <div class="table-wrap">
+        <table><thead><tr><th>Merchant category code</th><th class="num">Transactions</th><th class="num">Frauds</th><th class="num">Fraud rate</th></tr></thead><tbody>
+<tr><td>5999 · misc. retail</td><td class="num">100,015</td><td class="num">835</td><td class="num">0.835%</td></tr>
+<tr><td>4899 · cable/utilities</td><td class="num">120,426</td><td class="num">999</td><td class="num">0.830%</td></tr>
+<tr><td>5311 · department stores</td><td class="num">60,208</td><td class="num">496</td><td class="num">0.824%</td></tr>
+<tr><td>5812 · eating places</td><td class="num">239,530</td><td class="num">1,963</td><td class="num">0.820%</td></tr>
+<tr><td>5732 · electronics</td><td class="num">80,443</td><td class="num">650</td><td class="num">0.808%</td></tr>
+<tr><td>4900 · utilities</td><td class="num">160,888</td><td class="num">1,298</td><td class="num">0.807%</td></tr>
+<tr><td>4814 · telecom</td><td class="num">400,590</td><td class="num">3,226</td><td class="num">0.805%</td></tr>
+<tr><td>5411 · grocery</td><td class="num">300,383</td><td class="num">2,418</td><td class="num">0.805%</td></tr>
+<tr><td>5541 · service stations</td><td class="num">200,467</td><td class="num">1,605</td><td class="num">0.801%</td></tr>
+<tr><td>5499 · misc. food</td><td class="num">39,915</td><td class="num">319</td><td class="num">0.799%</td></tr>
+</tbody></table>
+        </div>
+        <p>The ten most frequent merchant categories span 0.835% to 0.799%, a spread of <strong>0.036 points</strong>. That is noise.</p>
+        <p>Static attributes describe a transaction. They do not separate a fraudulent one.</p>
+      </section>
+
+      <section class="chapter" id="recommendations">
+        <div class="chnum">question 06 · recommendations</div>
+        <h2>Five controls drawn straight from the numbers.</h2>
+        <ol>
+          <li><strong>Guard the night window.</strong> 22:00 to 06:59, all channels: biometric or OTP plus a device-binding check. Nine hours, 10.3% of volume, 99.1% of fraud.</li>
+          <li><strong>Delay high-value mobile and POS transfers.</strong> Above ₦50,000: a five-minute hold and a callback. The two channels carry 65.1% of losses.</li>
+          <li><strong>Watch Kaduna and Edo for money, Bayelsa and Gombe for rate.</strong> Pool small states into regional rules so 72 cases do not set policy.</li>
+          <li><strong>Put agent, branch and USSD on an exception report.</strong> They run above 0.82% on low volume and carry little telemetry.</li>
+          <li><strong>Review the night window every quarter.</strong> If transaction mix or monitoring coverage shifts, narrow or widen it on evidence rather than leaving it fixed.</li>
+        </ol>
+        <p>Do not build rules on amount, transaction type or merchant category. They are flat in this data and will add friction without detection.</p>
+      </section>
+
+      <section class="conclusion" id="conclusion">
+        <div class="chnum">the bottom line</div>
+        <h2>Fraud is 0.80% of transactions and 99.1% of the problem.</h2>
+        <p>Across five million transactions and ₦328.11 billion in value, fraud holds at 0.80% in every month, every weekday, every channel, every amount band and almost every merchant category. Split the same data by hour and the rate is <strong>7.75% overnight against 0.01% in daylight</strong>.</p>
+        <p>Channel and geography decide how much is at risk. Mobile and POS carry 65.1% of losses; Kaduna and Edo hold 5.75%. The hour decides when the risk is realised, and nothing else in the dataset comes close.</p>
+        <p>The useful negative result is that the usual suspects do not work. Amount, transaction type and merchant category should not carry a rule on their own.</p>
+        <blockquote>Fraud is not a large-transaction problem. It is an after-hours problem.</blockquote>
+      </section>
+    </article>
+
+    <div class="back-row">
+      <a class="btn btn-primary" href="index.html#projects">Back to projects</a>
+      <a class="btn btn-ghost" href="https://github.com/owoademartin16-lgtm/nigerian-card-fraud-analysis" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> Martin Owoade</span>
+    <span>Built with Python, curiosity, and clean data</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

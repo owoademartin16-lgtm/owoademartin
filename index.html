@@ -654,6 +654,28 @@
             </a>
           </div>
         </article>
+
+        <!-- 9. Card Fraud -->
+        <article class="proj-card reveal" style="--accent:#E96B6B">
+          <div class="proj-meta"><span class="dot" style="background:#E96B6B"></span>fraud analytics · 5M transactions</div>
+          <h3>Fraud Detection &amp; Risk Mitigation in Nigerian Banking Transactions</h3>
+          <p class="desc">Two years of Nigerian retail banking transactions: 5 million rows worth ₦328.11 billion, analysed for where card and transfer fraud concentrates by hour, channel and state.</p>
+          <div class="pills">
+            <span class="pill">Python</span><span class="pill">Pandas</span><span class="pill">Matplotlib</span>
+            <span class="pill">EDA</span><span class="pill">Fraud Analytics</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="mv">0.80%</div><div class="ml">fraud rate</div></div>
+            <div class="metric"><div class="mv">99.1%</div><div class="ml">fraud at night</div></div>
+            <div class="metric"><div class="mv">₦2.66B</div><div class="ml">fraud value</div></div>
+          </div>
+          <div class="proj-actions">
+            <a class="btn-sm solid" data-link="repo:cardfraud" href="https://github.com/owoademartin16-lgtm/nigerian-card-fraud-analysis" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn-sm" href="nigerian-card-fraud-analysis.html">Read Me
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </a>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -848,7 +870,8 @@
       hospital: "HCAHPS-Patient-Experience-Analysis",
       bank: "bank-customer-churn-prediction",
       retail: "retail-revenue-prediction-catboost",
-      loan: "loan-risk-analytics"
+      loan: "loan-risk-analytics",
+      cardfraud: "nigerian-card-fraud-analysis"
     },
     apps: {
       taxi: "https://5f4vefgpj8tbxceqvkq5db.streamlit.app/",
@@ -867,7 +890,7 @@
     const gh = "https://github.com/" + CONFIG.githubUser;
     document.querySelectorAll('[data-link="profile"]').forEach(el => { el.href = gh; });
     document.querySelectorAll('[data-link-text="profile"]').forEach(el => { el.textContent = gh.replace("https://", ""); });
-    const repoLinks = { taxi: 0, cannabis: 0, electricity: 0, airbnb: 0, hospital: 0, bank: 0, retail: 0, loan: 0 };
+    const repoLinks = { taxi: 0, cannabis: 0, electricity: 0, airbnb: 0, hospital: 0, bank: 0, retail: 0, loan: 0, cardfraud: 0 };
     Object.keys(repoLinks).forEach(key => {
       document.querySelectorAll('[data-link="repo:' + key + '"]').forEach(el => {
         el.href = gh + "/" + CONFIG.repos[key];
